@@ -4,36 +4,14 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>Hemodynamic DSS — Medicover MICU</title>
-
-<!-- ═══ PWA CONFIGURATION ═══════════════════════════════════════════════════
-     These tags enable "Add to Home Screen" on Android and iOS,
-     offline capability, and fullscreen launch (no browser chrome).
-═══════════════════════════════════════════════════════════════════════════ -->
-
-<!-- Web App Manifest — tells the browser this is an installable PWA -->
 <link rel="manifest" href="./manifest.json"/>
-
-<!-- ── iOS Safari specific ─────────────────────────────────────────────── -->
-<!-- Enables fullscreen launch from home screen on iPhone/iPad -->
 <meta name="apple-mobile-web-app-capable" content="yes"/>
-<!-- Status bar style: default | black | black-translucent -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<!-- App name shown under the icon on iOS home screen -->
 <meta name="apple-mobile-web-app-title" content="Hemo DSS"/>
-<!-- App icon for iOS (used for home screen and multitasking) -->
-<link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png"/>
-<link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png"/>
-
-<!-- ── Android / Chrome specific ────────────────────────────────────────── -->
-<!-- Colours the browser address bar and system status bar on Android -->
+<link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png"/>
 <meta name="theme-color" content="#0D7377"/>
-<!-- Prevents phone-number auto-detection from interfering with numeric inputs -->
-<meta name="format-detection" content="telephone=no"/>
-<!-- App description for search engines -->
-<meta name="description" content="Bedside hemodynamic decision support for Medicover MICU — RUSH protocol, shock phenotyping, fluid responsiveness, ScvO2 module."/>
-
-<!-- Favicon for desktop browsers -->
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png"/>
+<meta name="description" content="Bedside hemodynamic decision support for Medicover MICU"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 /* ═══════════════════════════════════════════════
@@ -889,82 +867,27 @@ input,select,button,textarea{
 </head>
 <body>
 
-<!-- ═══ PWA BANNERS (injected at bottom of body, positioned via CSS) ════════ -->
-
 <!-- Android/Chrome install banner -->
-<div id="pwa-install-banner" style="
-  display:none; position:fixed; bottom:0; left:0; right:0; z-index:9999;
-  background:linear-gradient(135deg,#064749,#0D7377);
-  color:#fff; padding:12px 18px; align-items:center; gap:12px;
-  box-shadow:0 -4px 20px rgba(0,0,0,0.25);
-  font-family:'DM Sans',sans-serif; font-size:13px;
-">
-  <img src="./icons/icon-192.png" style="width:40px;height:40px;border-radius:10px;flex-shrink:0;" alt="App icon"/>
-  <div style="flex:1">
-    <div style="font-weight:700;margin-bottom:2px;">Install Hemo DSS</div>
-    <div style="font-size:11px;opacity:.8;">Add to home screen for offline bedside use</div>
-  </div>
-  <button onclick="installApp()" style="
-    background:#fff; color:#064749; border:none; border-radius:8px;
-    padding:8px 16px; font-weight:700; font-size:13px; cursor:pointer;
-    font-family:'DM Sans',sans-serif; white-space:nowrap;
-  ">Install</button>
-  <button onclick="hideInstallBanner()" style="
-    background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.3);
-    border-radius:8px; padding:8px 12px; font-size:12px; cursor:pointer;
-    font-family:'DM Sans',sans-serif;
-  ">✕</button>
+<div id="pwa-install-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#064749,#0D7377);color:#fff;padding:12px 18px;align-items:center;gap:12px;box-shadow:0 -4px 20px rgba(0,0,0,.25);font-family:'DM Sans',sans-serif;font-size:13px;flex-wrap:wrap;">
+  <img src="./icon-192.png" style="width:40px;height:40px;border-radius:10px;flex-shrink:0;" alt=""/>
+  <div style="flex:1;min-width:160px;"><div style="font-weight:700;margin-bottom:2px;">Install Hemo DSS</div><div style="font-size:11px;opacity:.8;">Add to home screen for offline bedside use</div></div>
+  <button type="button" onclick="installApp()" style="background:#fff;color:#064749;border:none;border-radius:8px;padding:8px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Install</button>
+  <button type="button" onclick="hideInstallBanner()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">✕</button>
 </div>
 
 <!-- iOS Safari install hint -->
-<div id="pwa-ios-banner" style="
-  display:none; position:fixed; bottom:0; left:0; right:0; z-index:9999;
-  background:linear-gradient(135deg,#064749,#0D7377);
-  color:#fff; padding:14px 18px; align-items:flex-start; gap:12px;
-  box-shadow:0 -4px 20px rgba(0,0,0,0.25);
-  font-family:'DM Sans',sans-serif; font-size:13px; flex-direction:column;
-">
+<div id="pwa-ios-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#064749,#0D7377);color:#fff;padding:14px 18px;align-items:flex-start;gap:12px;box-shadow:0 -4px 20px rgba(0,0,0,.25);font-family:'DM Sans',sans-serif;font-size:13px;flex-direction:column;">
   <div style="display:flex;align-items:center;gap:12px;width:100%;">
-    <img src="./icons/icon-192.png" style="width:40px;height:40px;border-radius:10px;flex-shrink:0;" alt="App icon"/>
-    <div style="flex:1">
-      <div style="font-weight:700;margin-bottom:2px;">Install Hemo DSS on your iPhone</div>
-      <div style="font-size:11px;opacity:.85;line-height:1.5;">
-        Tap <strong>⎙ Share</strong> at the bottom of Safari,
-        then tap <strong>"Add to Home Screen"</strong>
-      </div>
-    </div>
-    <button onclick="dismissIOSBanner()" style="
-      background:rgba(255,255,255,0.15); color:#fff;
-      border:1px solid rgba(255,255,255,0.3); border-radius:8px;
-      padding:6px 10px; font-size:12px; cursor:pointer;
-      font-family:'DM Sans',sans-serif; flex-shrink:0; align-self:flex-start;
-    ">✕</button>
-  </div>
-  <!-- Visual arrow pointing to the iOS share button -->
-  <div style="
-    background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);
-    border-radius:8px; padding:8px 14px; font-size:12px; width:100%;
-    display:flex; align-items:center; gap:8px;
-  ">
-    <span style="font-size:20px;">⬇</span>
-    <span>Look for the Share button in your Safari toolbar below</span>
+    <img src="./icon-192.png" style="width:40px;height:40px;border-radius:10px;flex-shrink:0;" alt=""/>
+    <div style="flex:1;"><div style="font-weight:700;margin-bottom:2px;">Install Hemo DSS on your iPhone</div><div style="font-size:11px;opacity:.85;line-height:1.5;">Tap <strong>&#9641; Share</strong> in Safari, then tap <strong>"Add to Home Screen"</strong></div></div>
+    <button type="button" onclick="dismissIOSBanner()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;align-self:flex-start;">✕</button>
   </div>
 </div>
 
-<!-- App update available banner -->
-<div id="pwa-update-banner" style="
-  display:none; position:fixed; top:70px; left:50%; transform:translateX(-50%);
-  z-index:9999; background:#0D7377; color:#fff;
-  padding:10px 18px; border-radius:30px; align-items:center; gap:12px;
-  box-shadow:0 4px 20px rgba(0,0,0,0.3); font-family:'DM Sans',sans-serif;
-  font-size:13px; white-space:nowrap;
-">
+<!-- Update available banner -->
+<div id="pwa-update-banner" style="display:none;position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:9999;background:#0D7377;color:#fff;padding:10px 18px;border-radius:30px;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,.3);font-family:'DM Sans',sans-serif;font-size:13px;white-space:nowrap;">
   <span>🔄 New version available</span>
-  <button onclick="applyUpdate()" style="
-    background:#fff; color:#064749; border:none; border-radius:20px;
-    padding:5px 14px; font-weight:700; font-size:12px; cursor:pointer;
-    font-family:'DM Sans',sans-serif;
-  ">Update</button>
+  <button type="button" onclick="applyUpdate()" style="background:#fff;color:#064749;border:none;border-radius:20px;padding:5px 14px;font-weight:700;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">Update</button>
 </div>
 
 <!-- ══ TOP BAR ══ -->
@@ -2774,6 +2697,29 @@ function printSum(){
 </head>
 <body>
 
+<!-- Android/Chrome install banner -->
+<div id="pwa-install-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#064749,#0D7377);color:#fff;padding:12px 18px;align-items:center;gap:12px;box-shadow:0 -4px 20px rgba(0,0,0,.25);font-family:'DM Sans',sans-serif;font-size:13px;flex-wrap:wrap;">
+  <img src="./icon-192.png" style="width:40px;height:40px;border-radius:10px;flex-shrink:0;" alt=""/>
+  <div style="flex:1;min-width:160px;"><div style="font-weight:700;margin-bottom:2px;">Install Hemo DSS</div><div style="font-size:11px;opacity:.8;">Add to home screen for offline bedside use</div></div>
+  <button type="button" onclick="installApp()" style="background:#fff;color:#064749;border:none;border-radius:8px;padding:8px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Install</button>
+  <button type="button" onclick="hideInstallBanner()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">✕</button>
+</div>
+
+<!-- iOS Safari install hint -->
+<div id="pwa-ios-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#064749,#0D7377);color:#fff;padding:14px 18px;align-items:flex-start;gap:12px;box-shadow:0 -4px 20px rgba(0,0,0,.25);font-family:'DM Sans',sans-serif;font-size:13px;flex-direction:column;">
+  <div style="display:flex;align-items:center;gap:12px;width:100%;">
+    <img src="./icon-192.png" style="width:40px;height:40px;border-radius:10px;flex-shrink:0;" alt=""/>
+    <div style="flex:1;"><div style="font-weight:700;margin-bottom:2px;">Install Hemo DSS on your iPhone</div><div style="font-size:11px;opacity:.85;line-height:1.5;">Tap <strong>&#9641; Share</strong> in Safari, then tap <strong>"Add to Home Screen"</strong></div></div>
+    <button type="button" onclick="dismissIOSBanner()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;align-self:flex-start;">✕</button>
+  </div>
+</div>
+
+<!-- Update available banner -->
+<div id="pwa-update-banner" style="display:none;position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:9999;background:#0D7377;color:#fff;padding:10px 18px;border-radius:30px;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,.3);font-family:'DM Sans',sans-serif;font-size:13px;white-space:nowrap;">
+  <span>🔄 New version available</span>
+  <button type="button" onclick="applyUpdate()" style="background:#fff;color:#064749;border:none;border-radius:20px;padding:5px 14px;font-weight:700;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">Update</button>
+</div>
+
 <!-- Print button (hidden on print) -->
 <div class="no-print" style="position:sticky;top:0;z-index:100;background:#fff;padding:10px 14px;border-bottom:1px solid #C5DCDC;display:flex;align-items:center;justify-content:space-between;">
   <span style="font-size:13px;font-weight:700;color:#0D7377;">📋 Hemodynamic DSS Report — ${pt}</span>
@@ -3025,97 +2971,6 @@ function printSum(){
     setTimeout(function(){ window.print(); }, 600);
   });
 <\/script>
-
-
-<!-- ═══ SERVICE WORKER + INSTALL PROMPT ══════════════════════════════════════
-     Registers the service worker for offline caching.
-     Shows a subtle "Install App" banner when the browser fires beforeinstallprompt.
-════════════════════════════════════════════════════════════════════════════ -->
-<script>
-// ── Service Worker Registration ──────────────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js', { scope: './' })
-      .then(reg => {
-        console.log('[App] Service worker registered. Scope:', reg.scope);
-
-        // Check for updates every time app is opened
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // New version available — show subtle update notice
-              showUpdateBanner();
-            }
-          });
-        });
-      })
-      .catch(err => console.warn('[App] Service worker registration failed:', err));
-  });
-}
-
-// ── Install prompt (Android Chrome "Add to Home Screen" banner) ─────────────
-let deferredPrompt = null;
-
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();           // Stop the browser's automatic mini-infobar
-  deferredPrompt = e;           // Save it for later
-  showInstallBanner();          // Show our own styled banner
-});
-
-function showInstallBanner() {
-  const banner = document.getElementById('pwa-install-banner');
-  if (banner) banner.style.display = 'flex';
-}
-
-function hideInstallBanner() {
-  const banner = document.getElementById('pwa-install-banner');
-  if (banner) banner.style.display = 'none';
-}
-
-function installApp() {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  deferredPrompt.userChoice.then(result => {
-    console.log('[App] Install prompt result:', result.outcome);
-    deferredPrompt = null;
-    hideInstallBanner();
-  });
-}
-
-// ── Update available banner ──────────────────────────────────────────────────
-function showUpdateBanner() {
-  const banner = document.getElementById('pwa-update-banner');
-  if (banner) banner.style.display = 'flex';
-}
-
-function applyUpdate() {
-  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
-    window.location.reload();
-  }
-}
-
-// ── Hide iOS install banner after user taps dismiss ──────────────────────────
-function dismissIOSBanner() {
-  const banner = document.getElementById('pwa-ios-banner');
-  if (banner) banner.style.display = 'none';
-  localStorage.setItem('ios-banner-dismissed', '1');
-}
-
-// ── On load: show iOS install hint if on iOS and not already installed ───────
-window.addEventListener('DOMContentLoaded', () => {
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches
-                             || navigator.standalone;
-  const dismissed = localStorage.getItem('ios-banner-dismissed');
-
-  if (isIOS && !isInStandaloneMode && !dismissed) {
-    const banner = document.getElementById('pwa-ios-banner');
-    if (banner) banner.style.display = 'flex';
-  }
-});
-</script>
 </body>
 </html>`;
 
@@ -3173,93 +3028,65 @@ window.addEventListener('DOMContentLoaded',()=>{
 });
 </script>
 
-
-<!-- ═══ SERVICE WORKER + INSTALL PROMPT ══════════════════════════════════════
-     Registers the service worker for offline caching.
-     Shows a subtle "Install App" banner when the browser fires beforeinstallprompt.
-════════════════════════════════════════════════════════════════════════════ -->
 <script>
-// ── Service Worker Registration ──────────────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js', { scope: './' })
-      .then(reg => {
-        console.log('[App] Service worker registered. Scope:', reg.scope);
-
-        // Check for updates every time app is opened
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // New version available — show subtle update notice
-              showUpdateBanner();
+// ── Service Worker ──────────────────────────────────────────────────────────
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js',{scope:'/hemodynamic-dss/'})
+      .then(reg=>{
+        reg.addEventListener('updatefound',()=>{
+          const nw=reg.installing;
+          nw.addEventListener('statechange',()=>{
+            if(nw.state==='installed'&&navigator.serviceWorker.controller){
+              const b=document.getElementById('pwa-update-banner');
+              if(b) b.style.display='flex';
             }
           });
         });
-      })
-      .catch(err => console.warn('[App] Service worker registration failed:', err));
+      }).catch(e=>console.warn('[SW]',e));
   });
 }
 
-// ── Install prompt (Android Chrome "Add to Home Screen" banner) ─────────────
-let deferredPrompt = null;
-
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();           // Stop the browser's automatic mini-infobar
-  deferredPrompt = e;           // Save it for later
-  showInstallBanner();          // Show our own styled banner
+// ── Android install prompt ───────────────────────────────────────────────────
+let _deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); _deferredPrompt=e;
+  const b=document.getElementById('pwa-install-banner');
+  if(b) b.style.display='flex';
 });
-
-function showInstallBanner() {
-  const banner = document.getElementById('pwa-install-banner');
-  if (banner) banner.style.display = 'flex';
-}
-
-function hideInstallBanner() {
-  const banner = document.getElementById('pwa-install-banner');
-  if (banner) banner.style.display = 'none';
-}
-
-function installApp() {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  deferredPrompt.userChoice.then(result => {
-    console.log('[App] Install prompt result:', result.outcome);
-    deferredPrompt = null;
+function installApp(){
+  if(!_deferredPrompt) return;
+  _deferredPrompt.prompt();
+  _deferredPrompt.userChoice.then(()=>{
+    _deferredPrompt=null;
     hideInstallBanner();
   });
 }
-
-// ── Update available banner ──────────────────────────────────────────────────
-function showUpdateBanner() {
-  const banner = document.getElementById('pwa-update-banner');
-  if (banner) banner.style.display = 'flex';
+function hideInstallBanner(){
+  const b=document.getElementById('pwa-install-banner');
+  if(b) b.style.display='none';
 }
-
-function applyUpdate() {
-  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+function applyUpdate(){
+  if('serviceWorker' in navigator&&navigator.serviceWorker.controller){
+    navigator.serviceWorker.controller.postMessage({type:'SKIP_WAITING'});
     window.location.reload();
   }
 }
-
-// ── Hide iOS install banner after user taps dismiss ──────────────────────────
-function dismissIOSBanner() {
-  const banner = document.getElementById('pwa-ios-banner');
-  if (banner) banner.style.display = 'none';
-  localStorage.setItem('ios-banner-dismissed', '1');
+function dismissIOSBanner(){
+  const b=document.getElementById('pwa-ios-banner');
+  if(b) b.style.display='none';
+  try{ localStorage.setItem('ios-banner-dismissed','1'); }catch(e){}
 }
 
-// ── On load: show iOS install hint if on iOS and not already installed ───────
-window.addEventListener('DOMContentLoaded', () => {
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches
-                             || navigator.standalone;
-  const dismissed = localStorage.getItem('ios-banner-dismissed');
-
-  if (isIOS && !isInStandaloneMode && !dismissed) {
-    const banner = document.getElementById('pwa-ios-banner');
-    if (banner) banner.style.display = 'flex';
+// ── iOS install hint ─────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',()=>{
+  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+  const isStandalone=window.matchMedia('(display-mode:standalone)').matches||window.navigator.standalone;
+  let dismissed=false;
+  try{ dismissed=!!localStorage.getItem('ios-banner-dismissed'); }catch(e){}
+  if(isIOS&&!isStandalone&&!dismissed){
+    const b=document.getElementById('pwa-ios-banner');
+    if(b) b.style.display='flex';
   }
 });
 </script>
