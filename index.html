@@ -1,0 +1,3267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<title>Hemodynamic DSS — Medicover MICU</title>
+
+<!-- ═══ PWA CONFIGURATION ═══════════════════════════════════════════════════
+     These tags enable "Add to Home Screen" on Android and iOS,
+     offline capability, and fullscreen launch (no browser chrome).
+═══════════════════════════════════════════════════════════════════════════ -->
+
+<!-- Web App Manifest — tells the browser this is an installable PWA -->
+<link rel="manifest" href="./manifest.json"/>
+
+<!-- ── iOS Safari specific ─────────────────────────────────────────────── -->
+<!-- Enables fullscreen launch from home screen on iPhone/iPad -->
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<!-- Status bar style: default | black | black-translucent -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<!-- App name shown under the icon on iOS home screen -->
+<meta name="apple-mobile-web-app-title" content="Hemo DSS"/>
+<!-- App icon for iOS (used for home screen and multitasking) -->
+<link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png"/>
+<link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png"/>
+
+<!-- ── Android / Chrome specific ────────────────────────────────────────── -->
+<!-- Colours the browser address bar and system status bar on Android -->
+<meta name="theme-color" content="#0D7377"/>
+<!-- Prevents phone-number auto-detection from interfering with numeric inputs -->
+<meta name="format-detection" content="telephone=no"/>
+<!-- App description for search engines -->
+<meta name="description" content="Bedside hemodynamic decision support for Medicover MICU — RUSH protocol, shock phenotyping, fluid responsiveness, ScvO2 module."/>
+
+<!-- Favicon for desktop browsers -->
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════════════ */
+:root{
+  /* Brand teal */
+  --tl:#0D7377; --td:#064749; --tm:#14919B; --tl2:#1AACB8; --tlight:#E6F4F5; --tlighter:#F2FAFA;
+  /* Semantics */
+  --red:#D63031;    --redl:#FFF0F0;   --redb:#FFD6D6;
+  --orange:#E17055; --orangel:#FFF4EF; --orangeb:#FFD4C8;
+  --green:#00897B;  --greenl:#EDFAF8;  --greenb:#B2DFDB;
+  --yellow:#F9A825; --yellowl:#FFFDE7; --yellowb:#FFECB3;
+  --blue:#1565C0;   --bluel:#E8F1FD;   --blueb:#BBDEFB;
+  --purple:#7B1FA2; --purplel:#F5EEF8;
+  /* Neutrals */
+  --bg:#EFF4F5;
+  --card:#FFFFFF;
+  --card2:#F7FBFC;
+  --border:#D4E8EA;
+  --border2:#C0D8DB;
+  --text:#0F2328;
+  --text2:#2E4F55;
+  --muted:#698E93;
+  --muted2:#9BBFC4;
+  /* Panel dark */
+  --panel-bg:#091E22;
+  --panel-card:rgba(255,255,255,0.07);
+  --panel-border:rgba(255,255,255,0.10);
+  /* Shadows */
+  --sh-sm:0 1px 4px rgba(9,30,34,0.08);
+  --sh-md:0 4px 16px rgba(9,30,34,0.10);
+  --sh-lg:0 8px 32px rgba(9,30,34,0.14);
+  /* Radius */
+  --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:20px;
+  /* Transition */
+  --t:.18s cubic-bezier(.4,0,.2,1);
+  /* Sizes */
+  --header-h:60px;
+  /* Panel width: fixed 320px, slightly wider on large screens */
+  --panel-w:320px;
+}
+
+/* ═══════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════ */
+*{
+  box-sizing:border-box;
+  margin:0; padding:0;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+/* KEY: html is the scroll container. Do NOT set overflow on html/body —
+   it breaks sticky positioning AND shrinks body width in many browsers. */
+html{
+  height:100%;
+  scroll-behavior:smooth;
+  -webkit-text-size-adjust:100%;
+}
+/* KEY FIX: body as flex-column.
+   Flex children naturally fill the cross-axis (= full viewport width)
+   without width:100%, without overflow-x:hidden, without any hacks.
+   This is the only reliable full-width technique across all browsers. */
+body{
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+  min-height:100dvh;
+  background:var(--bg);
+  font-family:'DM Sans',system-ui,sans-serif;
+  color:var(--text);
+  font-size:14px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  -webkit-text-size-adjust:100%;
+}
+input,select,button,textarea{
+  -webkit-appearance:none;
+  appearance:none;
+  border-radius:0;
+}
+
+/* ═══════════════════════════════════════════════
+   STICKY HEADER
+═══════════════════════════════════════════════ */
+#topbar{
+  flex-shrink:0;
+  position:-webkit-sticky; position:sticky; top:0; z-index:300;
+  height:var(--header-h);
+  background:linear-gradient(110deg,var(--td) 0%,var(--tl) 55%,var(--tm) 100%);
+  color:#fff;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 20px;
+  box-shadow:0 2px 20px rgba(6,71,73,0.35);
+}
+#topbar::after{
+  content:'';
+  position:absolute; inset:0;
+  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events:none; z-index:-1;
+}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand-icon{
+  width:38px; height:38px;
+  background:rgba(255,255,255,0.15);
+  border:1.5px solid rgba(255,255,255,0.25);
+  border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; backdrop-filter:blur(4px);
+  flex-shrink:0;
+}
+.brand-text{line-height:1.25;}
+.brand-text .t1{font-size:15px;font-weight:700;letter-spacing:.2px;}
+.brand-text .t2{font-size:10.5px;font-weight:400;opacity:.72;letter-spacing:.3px;}
+#clock{
+  text-align:right; font-size:12px; font-family:'DM Mono',monospace;
+  opacity:.88; line-height:1.5;
+  background:rgba(255,255,255,0.10);
+  border:1px solid rgba(255,255,255,0.15);
+  border-radius:8px; padding:5px 10px;
+}
+/* Mobile panel toggle button */
+#panelToggle{
+  display:none;
+  background:rgba(255,255,255,0.15);
+  border:1px solid rgba(255,255,255,0.25);
+  border-radius:8px; padding:6px 10px;
+  color:#fff; font-size:12px; font-weight:600;
+  cursor:pointer; gap:5px; align-items:center;
+  font-family:'DM Sans',sans-serif;
+}
+
+/* ═══════════════════════════════════════════════
+   RED FLAG BANNER
+═══════════════════════════════════════════════ */
+#flagBanner{
+  flex-shrink:0;
+  display:none;
+  position:-webkit-sticky; position:sticky; top:var(--header-h); z-index:290;
+  background:linear-gradient(90deg,#991B1B,var(--red),#991B1B);
+  color:#fff; padding:10px 20px;
+  font-weight:600; font-size:13px;
+  border-bottom:3px solid #7F1D1D;
+  -webkit-animation:pulseBanner 2s ease-in-out infinite;
+  animation:pulseBanner 2s ease-in-out infinite;
+}
+#flagBanner .flag-items{margin-top:3px;font-weight:400;font-size:12px;opacity:.9;font-family:'DM Mono',monospace;}
+@-webkit-keyframes pulseBanner{0%,100%{opacity:1}50%{opacity:.88}}
+@keyframes pulseBanner{0%,100%{opacity:1}50%{opacity:.88}}
+
+/* ═══════════════════════════════════════════════
+   SHELL LAYOUT
+   Architecture: body(flex-col) > #shell(flex-row) > #main(flex:1) + #panel(fixed)
+   This guarantees 100% viewport width on ALL browsers without any hacks.
+═══════════════════════════════════════════════ */
+#shell{
+  flex:1;                    /* Takes all remaining body height */
+  display:flex;
+  flex-direction:row;
+  align-items:stretch;       /* Both columns fill the same height */
+  min-height:calc(100vh - var(--header-h));
+  min-height:calc(100dvh - var(--header-h));
+}
+#main{
+  flex:1 1 0%;               /* Fills ALL remaining width after panel */
+  min-width:0;               /* CRITICAL: prevents flex blowout */
+  padding:18px 18px 30px;
+  overflow-x:hidden;         /* Clip overflow HERE, not on body */
+}
+#panel{
+  flex:0 0 var(--panel-w);   /* Never grows, never shrinks */
+  width:var(--panel-w);
+  position:-webkit-sticky;
+  position:sticky;
+  top:var(--header-h);
+  height:calc(100vh - var(--header-h));
+  height:calc(100dvh - var(--header-h));
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  background:var(--panel-bg);
+  color:#fff;
+  padding:18px 16px;
+  border-left:1px solid rgba(20,145,155,0.3);
+  scrollbar-width:thin;
+  scrollbar-color:rgba(255,255,255,0.15) transparent;
+}
+#panel::-webkit-scrollbar{width:4px;}
+#panel::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:2px;}
+
+/* ═══════════════════════════════════════════════
+   PATIENT HEADER CARD
+═══════════════════════════════════════════════ */
+#ptHeader{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--r-lg);
+  padding:14px 18px 12px;
+  margin-bottom:16px;
+  box-shadow:var(--sh-sm);
+  display:grid;
+  /* auto-fit: 8 items fill full width on desktop, wrap on smaller screens */
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:10px;
+  width:100%;
+}
+.pt-title{
+  grid-column:1/-1;
+  display:flex; align-items:center; gap:8px;
+  font-size:11px; font-weight:600;
+  color:var(--tl); text-transform:uppercase; letter-spacing:.8px;
+  padding-bottom:8px;
+  border-bottom:1px solid var(--border);
+  margin-bottom:2px;
+}
+.pf label{
+  font-size:10.5px; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.5px;
+  display:block; margin-bottom:4px; font-weight:600;
+}
+
+/* ═══════════════════════════════════════════════
+   SECTION TABS  — wrapping grid, all visible
+═══════════════════════════════════════════════ */
+#tabs-wrap{
+  margin-bottom:16px;
+}
+#tabs{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:6px;
+}
+.tab{
+  display:flex; align-items:center; justify-content:center; gap:5px;
+  padding:8px 6px;
+  border-radius:var(--r-xl);   /* restore from global reset */
+  border:1.5px solid var(--border);
+  background:var(--card);
+  cursor:pointer;
+  font-size:12px; font-weight:600;
+  color:var(--muted);
+  white-space:nowrap;
+  transition:all var(--t);
+  box-shadow:var(--sh-sm);
+  font-family:'DM Sans',sans-serif;
+  text-align:center;
+  min-height:44px; /* iOS HIG touch target */
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+.tab:hover{background:var(--tlight);border-color:var(--tm);color:var(--tl);}
+.tab.active{
+  background:linear-gradient(135deg,var(--tl),var(--tm));
+  color:#fff; border-color:transparent;
+  box-shadow:0 4px 14px rgba(13,115,119,0.35);
+}
+.tab.t-red{border-color:var(--redb);color:var(--red);}
+.tab.t-red.active{background:linear-gradient(135deg,#991B1B,var(--red));box-shadow:0 4px 14px rgba(214,48,49,0.35);}
+.tab .t-num{
+  width:18px; height:18px;
+  background:rgba(0,0,0,0.08);
+  border-radius:50%;
+  font-size:10px; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+.tab.active .t-num{background:rgba(255,255,255,0.22);}
+
+/* Tablet: 5+5 two-row grid — same as desktop */
+@media(max-width:1024px){
+  #tabs{ grid-template-columns:repeat(5,1fr); gap:5px; }
+  .tab{ font-size:11.5px; padding:8px 4px; }
+}
+
+/* Mobile: 5+5 two-row, smaller text, hide number badge */
+@media(max-width:768px){
+  #shell{
+    flex-direction:column;   /* Stack main + panel vertically */
+  }
+  #panelToggle{display:flex;}
+  #panel{
+    flex:none;
+    width:100%;
+    position:static;
+    height:auto;
+    border-left:none;
+    border-top:2px solid rgba(20,145,155,0.4);
+    display:none;
+    padding:14px;
+  }
+  #panel.panel-open{display:block;}
+  #main{
+    flex:none;
+    width:100%;
+    padding:12px 12px 24px;
+  }
+  .brand-text .t1{font-size:13px;}
+  .brand-text .t2{display:none;}
+  #clock{display:none;}
+  .card-head h3 .ico{width:24px;height:24px;font-size:12px;}
+  .card-head h3{font-size:12.5px;}
+  .card-body{padding:12px 14px;}
+}
+@media(max-width:420px){
+  #tabs{ grid-template-columns:repeat(5,1fr); gap:3px; }
+  .tab{ font-size:9.5px; padding:6px 2px; border-radius:8px; line-height:1.2; }
+}
+
+/* ═══════════════════════════════════════════════
+   SECTION VISIBILITY
+═══════════════════════════════════════════════ */
+.section{
+  display:none;
+  opacity:0;
+  /* iOS Safari: animation on display:none->block is ignored.
+     Use visibility+opacity transition instead for reliable cross-browser fade. */
+}
+.section.active{
+  display:block;
+  opacity:1;
+  -webkit-animation:fadeIn .22s ease both;
+  animation:fadeIn .22s ease both;
+}
+@-webkit-keyframes fadeIn{from{opacity:0;-webkit-transform:translateY(6px);transform:translateY(6px)}to{opacity:1;-webkit-transform:translateY(0);transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0;-webkit-transform:translateY(6px);transform:translateY(6px)}to{opacity:1;-webkit-transform:translateY(0);transform:translateY(0)}}
+
+/* ═══════════════════════════════════════════════
+   CARDS
+═══════════════════════════════════════════════ */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--r-lg);
+  margin-bottom:14px;
+  box-shadow:var(--sh-md);
+  overflow:hidden;
+}
+.card-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:13px 18px 10px;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(90deg,var(--tlighter),var(--card));
+}
+.card-head h3{
+  font-size:13.5px; font-weight:700;
+  color:var(--td);
+  display:flex; align-items:center; gap:8px;
+  letter-spacing:.1px;
+}
+.card-head h3 .ico{
+  width:28px; height:28px;
+  background:linear-gradient(135deg,var(--tl),var(--tm));
+  border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; flex-shrink:0;
+}
+.badge{
+  font-size:10px; font-weight:700;
+  background:var(--tlight); color:var(--tl);
+  border:1px solid rgba(13,115,119,0.2);
+  border-radius:20px; padding:2px 9px;
+  letter-spacing:.3px;
+}
+.badge.badge-auto{background:#EEF2FF;color:#3730A3;border-color:rgba(99,102,241,0.25);}
+.card-body{padding:16px 18px;}
+
+/* ═══════════════════════════════════════════════
+   FORM GRID — auto-fill responsive columns
+═══════════════════════════════════════════════ */
+.fg{display:grid;gap:12px;margin-bottom:12px;}
+.fg-3{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));}
+.fg-2{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));}
+.fg-4{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));}
+
+/* Form rows — auto-fit collapses empty tracks so items always fill the full card width.
+   auto-fill (old) = creates ghost columns → items bunch left.
+   auto-fit (new)  = empty tracks collapse  → items stretch across 100%.
+   minmax sets the column minimum; 1fr distributes remaining space. */
+.row {display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:12px;}
+.row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:12px;}
+.row4{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:12px;}
+
+/* ═══════════════════════════════════════════════
+   FIELD
+═══════════════════════════════════════════════ */
+.field{display:flex;flex-direction:column;width:100%;min-width:0;}
+.field label{
+  font-size:11px; color:var(--muted); font-weight:600;
+  text-transform:uppercase; letter-spacing:.5px;
+  margin-bottom:5px;
+}
+.field input[type=number],
+.field input[type=text],
+.field select{
+  width:100%;
+  border:1.5px solid var(--border);
+  /* Restore border-radius after global reset */
+  border-radius:var(--r-sm);
+  padding:9px 11px;
+  /* iOS: font-size MUST be ≥16px to prevent auto-zoom on focus.
+     We use 16px here and scale label text for visual balance. */
+  font-size:16px;
+  font-family:'DM Sans',sans-serif;
+  color:var(--text); background:var(--card2);
+  transition:border-color var(--t), box-shadow var(--t), background var(--t);
+  min-height:44px; /* iOS HIG minimum touch target */
+  -webkit-appearance:none;
+  appearance:none;
+  /* iOS: prevent inner shadow on inputs */
+  box-shadow:none;
+}
+.field select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23698E93' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+  padding-right:30px;
+  /* iOS: cursor pointer on select */
+  cursor:pointer;
+}
+.field input:focus,.field select:focus{
+  outline:none;
+  border-color:var(--tl);
+  box-shadow:0 0 0 3px rgba(13,115,119,0.13);
+  background:#fff;
+}
+/* Patient header inputs — same 16px rule */
+.pf input{
+  width:100%;
+  border:1.5px solid var(--border);
+  border-radius:var(--r-sm);
+  padding:7px 10px;
+  font-size:16px;
+  font-family:'DM Sans',sans-serif;
+  color:var(--text); background:var(--card2);
+  transition:border-color var(--t), box-shadow var(--t);
+  min-height:44px;
+  -webkit-appearance:none;
+  appearance:none;
+  box-shadow:none;
+}
+.pf input:focus{
+  outline:none;
+  border-color:var(--tl);
+  box-shadow:0 0 0 3px rgba(13,115,119,0.12);
+  background:#fff;
+}
+
+/* ═══════════════════════════════════════════════
+   TOGGLE BUTTONS — pill style
+═══════════════════════════════════════════════ */
+.toggle-group{
+  display:flex; gap:0;
+  border-radius:var(--r-sm);
+  overflow:hidden;
+  border:1.5px solid var(--border);
+  min-height:44px; /* iOS HIG touch target */
+}
+.toggle-group button{
+  flex:1; padding:8px 6px;
+  border:none;
+  /* Restore border-radius after global reset */
+  border-radius:0;
+  background:var(--card2);
+  cursor:pointer;
+  font-size:13px; font-family:'DM Sans',sans-serif;
+  font-weight:600; color:var(--muted);
+  transition:all var(--t);
+  line-height:1;
+  /* iOS: ensure tap is registered */
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  /* iOS: prevent button from shrinking text */
+  white-space:nowrap;
+  min-height:44px;
+}
+.toggle-group button:not(:last-child){border-right:1.5px solid var(--border);}
+.toggle-group button:hover{background:var(--tlight);color:var(--tl);}
+.toggle-group button.sel-yes{
+  background:linear-gradient(135deg,#00897B,#00BCD4);
+  color:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,0.15);
+}
+.toggle-group button.sel-no{
+  background:linear-gradient(135deg,#C62828,var(--red));
+  color:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+/* ═══════════════════════════════════════════════
+   RESULT BOXES
+═══════════════════════════════════════════════ */
+.result{
+  border-radius:var(--r-md);
+  padding:13px 15px;
+  margin-top:14px;
+  font-size:13px;
+  border-left:4px solid transparent;
+}
+.result.green{background:var(--greenl);border-color:var(--green);color:#004D40;}
+.result.red{background:var(--redl);border-color:var(--red);color:#7F1D1D;}
+.result.orange{background:var(--orangel);border-color:var(--orange);color:#7B2D00;}
+.result.blue{background:var(--bluel);border-color:var(--blue);color:var(--blue);}
+.result.yellow{background:var(--yellowl);border-color:var(--yellow);color:#78350F;}
+.result strong{display:block;font-size:14px;font-weight:700;margin-bottom:5px;}
+.result ul{margin:6px 0 0 16px;font-size:12.5px;}
+.result ul li{margin-bottom:3px;line-height:1.5;}
+
+/* ═══════════════════════════════════════════════
+   RUSH SUB-TABS
+═══════════════════════════════════════════════ */
+.subtabs{
+  display:flex; gap:6px; margin-bottom:14px;
+  overflow-x:auto; -webkit-overflow-scrolling:touch;
+  scrollbar-width:none; padding-bottom:2px;
+}
+.subtabs::-webkit-scrollbar{display:none;}
+.stab{
+  display:flex; align-items:center; gap:5px;
+  padding:7px 16px;
+  border-radius:var(--r-xl);   /* restore from global reset */
+  border:1.5px solid var(--border);
+  background:var(--card2);
+  cursor:pointer;
+  font-size:12px; font-weight:600; color:var(--muted);
+  white-space:nowrap;
+  transition:all var(--t);
+  font-family:'DM Sans',sans-serif;
+  min-height:44px;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+.stab:hover{border-color:var(--tm);color:var(--tl);}
+.stab.active{
+  background:linear-gradient(135deg,var(--tm),var(--tl2));
+  color:#fff; border-color:transparent;
+  box-shadow:0 4px 10px rgba(20,145,155,0.3);
+}
+.sub{display:none;opacity:0;}
+.sub.active{display:block;opacity:1;-webkit-animation:fadeIn .2s ease both;animation:fadeIn .2s ease both;}
+
+/* ═══════════════════════════════════════════════
+   PHENOTYPE SCORE BARS
+═══════════════════════════════════════════════ */
+.pheno-bars{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
+.pheno-bar{}
+.pheno-bar .pb-head{
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:12px;font-weight:600;margin-bottom:5px;
+}
+.pheno-bar .pb-name{color:var(--text2);}
+.pheno-bar .pb-score{
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  background:var(--card2);
+  border:1px solid var(--border);
+  border-radius:4px;padding:1px 6px;
+}
+.pheno-bar .bar-track{
+  height:10px;border-radius:5px;
+  background:var(--border);overflow:hidden;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,0.06);
+}
+.pheno-bar .bar-fill{height:100%;border-radius:5px;-webkit-transition:width .5s cubic-bezier(.4,0,.2,1);transition:width .5s cubic-bezier(.4,0,.2,1);}
+
+/* ═══════════════════════════════════════════════
+   REASSESSMENT TABLE
+═══════════════════════════════════════════════ */
+.ra-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:12px;border-radius:var(--r-md);border:1px solid var(--border);}
+#raTable{width:100%;border-collapse:collapse;font-size:12px;min-width:700px;}
+#raTable th{
+  background:linear-gradient(90deg,var(--tlight),#f0f9f9);
+  color:var(--td);padding:8px 10px;
+  text-align:left;font-weight:700;
+  font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;
+  border-bottom:2px solid var(--border2);
+}
+#raTable td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+#raTable tr:last-child td{border-bottom:none;}
+#raTable tr:nth-child(even) td{background:var(--card2);}
+.trend-up{color:var(--green);font-weight:700;}
+.trend-dn{color:var(--red);font-weight:700;}
+.trend-nc{color:var(--muted);}
+
+/* ═══════════════════════════════════════════════
+   LIVE PANEL
+═══════════════════════════════════════════════ */
+#panel-head{
+  display:flex;align-items:center;gap:8px;
+  font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.8px;
+  color:rgba(255,255,255,0.5);
+  margin-bottom:14px;padding-bottom:12px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+#panel-head .pulse-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:#22C55E;flex-shrink:0;
+  box-shadow:0 0 6px #22C55E;
+  -webkit-animation:pulseDot 2s ease-in-out infinite; animation:pulseDot 2s ease-in-out infinite;
+}
+@-webkit-keyframes pulseDot{0%,100%{box-shadow:0 0 6px #22C55E}50%{box-shadow:0 0 14px #22C55E,0 0 22px rgba(34,197,94,0.4)}}
+@keyframes pulseDot{0%,100%{box-shadow:0 0 6px #22C55E}50%{box-shadow:0 0 14px #22C55E,0 0 22px rgba(34,197,94,0.4)}}
+.p-sec{
+  background:var(--panel-card);
+  border:1px solid var(--panel-border);
+  border-radius:var(--r-md);
+  padding:10px 12px;
+  margin-bottom:8px;
+  border-left:3px solid rgba(255,255,255,0.15);
+  transition:border-color var(--t);
+}
+.p-sec .p-label{
+  font-size:9.5px;text-transform:uppercase;
+  letter-spacing:.6px;opacity:.5;margin-bottom:4px;font-weight:600;
+}
+.p-sec .p-val{
+  font-size:12px;font-weight:600;line-height:1.45;
+  color:rgba(255,255,255,0.9);
+}
+.p-sec .p-val small{font-size:10.5px;font-weight:400;opacity:.7;display:block;margin-top:2px;}
+.p-sec.p-ok{border-left-color:#22C55E;background:rgba(34,197,94,0.08);}
+.p-sec.p-warn{border-left-color:#F59E0B;background:rgba(245,158,11,0.08);}
+.p-sec.p-alert{border-left-color:#EF4444;background:rgba(239,68,68,0.10);}
+.p-sec.p-info{border-left-color:#38BDF8;background:rgba(56,189,248,0.08);}
+
+/* SI chip */
+.si-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  font-family:'DM Mono',monospace;font-size:14px;font-weight:500;
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:8px;padding:5px 10px;margin-top:6px;
+}
+
+/* ═══════════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════════ */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 18px;
+  border-radius:var(--r-sm);   /* restore from global reset */
+  font-family:'DM Sans',sans-serif;
+  font-size:13px;font-weight:600;
+  cursor:pointer;border:none;
+  transition:all var(--t);
+  letter-spacing:.1px;
+  min-height:44px;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+.btn-tl{background:linear-gradient(135deg,var(--tl),var(--tm));color:#fff;box-shadow:0 3px 10px rgba(13,115,119,0.3);}
+.btn-tl:hover{box-shadow:0 5px 16px rgba(13,115,119,0.4);transform:translateY(-1px);}
+.btn-outline{background:#fff;border:1.5px solid var(--border);color:var(--text2);}
+.btn-outline:hover{border-color:var(--tl);color:var(--tl);}
+.btn-sm{padding:7px 13px;font-size:12px;}
+.btn-danger{background:linear-gradient(135deg,#991B1B,var(--red));color:#fff;box-shadow:0 3px 10px rgba(214,48,49,0.3);}
+
+/* ═══════════════════════════════════════════════
+   SUMMARY BLOCKS
+═══════════════════════════════════════════════ */
+.sum-block{
+  background:linear-gradient(135deg,var(--tlighter),#f9fefe);
+  border:1px solid var(--border);
+  border-radius:var(--r-md);
+  padding:14px 16px;
+  margin-bottom:10px;
+  border-left:4px solid var(--tl);
+}
+.sum-block h4{
+  font-size:11px;font-weight:700;color:var(--tl);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;
+}
+.sum-block p{font-size:13px;color:var(--text2);line-height:1.65;}
+
+/* ═══════════════════════════════════════════════
+   INFO CALLOUT
+═══════════════════════════════════════════════ */
+.callout{
+  border-radius:var(--r-sm);
+  padding:10px 13px;
+  font-size:12.5px;
+  margin-bottom:12px;
+  display:flex;gap:9px;align-items:flex-start;
+}
+.callout-tl{background:var(--tlight);border:1px solid rgba(13,115,119,0.2);color:var(--td);}
+.callout-warn{background:var(--yellowl);border:1px solid rgba(249,168,37,0.3);color:#78350F;}
+.callout-blue{background:var(--bluel);border:1px solid var(--blueb);color:var(--blue);}
+.callout-ico{font-size:14px;flex-shrink:0;margin-top:1px;}
+
+/* ═══════════════════════════════════════════════
+   DISCLAIMER STRIP
+═══════════════════════════════════════════════ */
+.disclaimer{
+  background:var(--yellowl);border:1.5px solid rgba(249,168,37,0.35);
+  border-radius:var(--r-sm);padding:9px 13px;
+  font-size:11.5px;color:#78350F;margin-top:12px;
+  display:flex;gap:8px;align-items:flex-start;
+  line-height:1.55;
+}
+.disclaimer::before{content:'⚕';font-size:14px;flex-shrink:0;}
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE — LARGE DESKTOP  ≥1400px
+   Widen panel slightly, main fills remainder
+═══════════════════════════════════════════════ */
+@media(min-width:1400px){
+  :root{--panel-w:360px;}
+  #main{padding:20px 24px 36px;}
+}
+@media(min-width:1800px){
+  :root{--panel-w:400px;}
+  #main{padding:22px 30px 36px;}
+}
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE — TABLET  ≤1024px
+═══════════════════════════════════════════════ */
+@media(max-width:1024px){
+  :root{--panel-w:280px;}
+
+}
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE — MOBILE  ≤768px
+═══════════════════════════════════════════════ */
+@media(max-width:768px){
+  #shell{
+    flex-direction:column;
+  }
+  #panelToggle{display:flex;}
+  #panel{
+    flex:none;
+    width:100%;
+    position:static;
+    height:auto;
+    border-left:none;
+    border-top:2px solid rgba(20,145,155,0.4);
+    display:none;
+    padding:14px;
+  }
+  #panel.panel-open{display:block;}
+  #main{
+    flex:none;
+    width:100%;
+    padding:12px 12px 24px;
+    overflow-x:hidden;
+  }
+  .brand-text .t1{font-size:13px;}
+  .brand-text .t2{display:none;}
+  #clock{display:none;}
+  .card-head h3 .ico{width:24px;height:24px;font-size:12px;}
+  .card-head h3{font-size:12.5px;}
+  .card-body{padding:12px 14px;}
+  #ptHeader{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:480px){
+  #ptHeader{grid-template-columns:1fr 1fr;}
+  .row,.row2,.row4,
+  .fg,.fg-2,.fg-3,.fg-4{grid-template-columns:1fr!important;}
+  .brand-icon{width:32px;height:32px;font-size:15px;}
+}
+
+/* ═══════════════════════════════════════════════
+   SCVO2 MODULE — value chips & dual display
+═══════════════════════════════════════════════ */
+.metric-chips{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-bottom:14px;
+}
+.metric-chip{
+  border-radius:var(--r-md);
+  padding:14px 16px;
+  border:1.5px solid var(--border);
+  background:var(--card2);
+  text-align:center;
+  transition:all var(--t);
+}
+.metric-chip .mc-label{
+  font-size:10.5px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;
+}
+.metric-chip .mc-value{
+  font-family:'DM Mono',monospace;
+  font-size:28px;font-weight:500;line-height:1;
+  color:var(--text);
+}
+.metric-chip .mc-unit{
+  font-size:11px;color:var(--muted);margin-top:4px;
+}
+.metric-chip .mc-status{
+  margin-top:6px;font-size:11px;font-weight:700;
+  border-radius:20px;padding:2px 10px;display:inline-block;
+}
+.metric-chip.mc-green{border-color:var(--greenb);background:var(--greenl);}
+.metric-chip.mc-green .mc-value{color:var(--green);}
+.metric-chip.mc-green .mc-status{background:var(--greenb);color:#004D40;}
+.metric-chip.mc-red{border-color:var(--redb);background:var(--redl);}
+.metric-chip.mc-red .mc-value{color:var(--red);}
+.metric-chip.mc-red .mc-status{background:var(--redb);color:#7F1D1D;}
+.metric-chip.mc-yellow{border-color:var(--yellowb);background:var(--yellowl);}
+.metric-chip.mc-yellow .mc-value{color:var(--yellow);}
+.metric-chip.mc-yellow .mc-status{background:var(--yellowb);color:#78350F;}
+.metric-chip.mc-neutral{border-color:var(--border);background:var(--card2);}
+.metric-chip.mc-neutral .mc-value{color:var(--text2);}
+
+/* Why-it-matters context box */
+.context-box{
+  background:linear-gradient(135deg,#F0F9FF,#E8F4F5);
+  border:1.5px solid rgba(13,115,119,0.2);
+  border-radius:var(--r-md);
+  padding:12px 14px;
+  margin-bottom:14px;
+  font-size:12.5px;color:var(--text2);line-height:1.6;
+}
+.context-box strong{color:var(--tl);display:block;margin-bottom:4px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;}
+
+/* Phenotype support line */
+.pheno-support{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 13px;
+  border-radius:var(--r-sm);
+  background:var(--tlight);
+  border:1px solid rgba(13,115,119,0.15);
+  font-size:12.5px;font-weight:600;color:var(--td);
+  margin-top:10px;
+}
+.pheno-support .ps-ico{font-size:15px;flex-shrink:0;}
+
+/* ScvO2 action box */
+.action-box{
+  border-radius:var(--r-md);
+  padding:12px 14px;
+  font-size:12.5px;
+  border-left:4px solid var(--tl);
+  background:var(--tlighter);
+  margin-top:12px;
+}
+.action-box strong{display:block;font-size:13px;font-weight:700;margin-bottom:5px;}
+.action-box ul{margin:4px 0 0 16px;}
+.action-box ul li{margin-bottom:3px;line-height:1.5;}
+
+/* ═══════════════════════════════════════════════
+   PRINT
+═══════════════════════════════════════════════ */
+@media print{
+  #topbar,#flagBanner,#tabs-wrap,#panelToggle,#panel,
+  .btn,.disclaimer{display:none!important;}
+  #shell{flex-direction:column;}#panel{display:none!important;}
+  .section{display:block!important;}
+  .card{box-shadow:none;border:1px solid #ccc;break-inside:avoid;}
+  body{font-size:12px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ PWA BANNERS (injected at bottom of body, positioned via CSS) ════════ -->
+
+<!-- Android/Chrome install banner -->
+<div id="pwa-install-banner" style="
+  display:none; position:fixed; bottom:0; left:0; right:0; z-index:9999;
+  background:linear-gradient(135deg,#064749,#0D7377);
+  color:#fff; padding:12px 18px; align-items:center; gap:12px;
+  box-shadow:0 -4px 20px rgba(0,0,0,0.25);
+  font-family:'DM Sans',sans-serif; font-size:13px;
+">
+  <img src="./icons/icon-192.png" style="width:40px;height:40px;border-radius:10px;flex-shrink:0;" alt="App icon"/>
+  <div style="flex:1">
+    <div style="font-weight:700;margin-bottom:2px;">Install Hemo DSS</div>
+    <div style="font-size:11px;opacity:.8;">Add to home screen for offline bedside use</div>
+  </div>
+  <button onclick="installApp()" style="
+    background:#fff; color:#064749; border:none; border-radius:8px;
+    padding:8px 16px; font-weight:700; font-size:13px; cursor:pointer;
+    font-family:'DM Sans',sans-serif; white-space:nowrap;
+  ">Install</button>
+  <button onclick="hideInstallBanner()" style="
+    background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.3);
+    border-radius:8px; padding:8px 12px; font-size:12px; cursor:pointer;
+    font-family:'DM Sans',sans-serif;
+  ">✕</button>
+</div>
+
+<!-- iOS Safari install hint -->
+<div id="pwa-ios-banner" style="
+  display:none; position:fixed; bottom:0; left:0; right:0; z-index:9999;
+  background:linear-gradient(135deg,#064749,#0D7377);
+  color:#fff; padding:14px 18px; align-items:flex-start; gap:12px;
+  box-shadow:0 -4px 20px rgba(0,0,0,0.25);
+  font-family:'DM Sans',sans-serif; font-size:13px; flex-direction:column;
+">
+  <div style="display:flex;align-items:center;gap:12px;width:100%;">
+    <img src="./icons/icon-192.png" style="width:40px;height:40px;border-radius:10px;flex-shrink:0;" alt="App icon"/>
+    <div style="flex:1">
+      <div style="font-weight:700;margin-bottom:2px;">Install Hemo DSS on your iPhone</div>
+      <div style="font-size:11px;opacity:.85;line-height:1.5;">
+        Tap <strong>⎙ Share</strong> at the bottom of Safari,
+        then tap <strong>"Add to Home Screen"</strong>
+      </div>
+    </div>
+    <button onclick="dismissIOSBanner()" style="
+      background:rgba(255,255,255,0.15); color:#fff;
+      border:1px solid rgba(255,255,255,0.3); border-radius:8px;
+      padding:6px 10px; font-size:12px; cursor:pointer;
+      font-family:'DM Sans',sans-serif; flex-shrink:0; align-self:flex-start;
+    ">✕</button>
+  </div>
+  <!-- Visual arrow pointing to the iOS share button -->
+  <div style="
+    background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);
+    border-radius:8px; padding:8px 14px; font-size:12px; width:100%;
+    display:flex; align-items:center; gap:8px;
+  ">
+    <span style="font-size:20px;">⬇</span>
+    <span>Look for the Share button in your Safari toolbar below</span>
+  </div>
+</div>
+
+<!-- App update available banner -->
+<div id="pwa-update-banner" style="
+  display:none; position:fixed; top:70px; left:50%; transform:translateX(-50%);
+  z-index:9999; background:#0D7377; color:#fff;
+  padding:10px 18px; border-radius:30px; align-items:center; gap:12px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.3); font-family:'DM Sans',sans-serif;
+  font-size:13px; white-space:nowrap;
+">
+  <span>🔄 New version available</span>
+  <button onclick="applyUpdate()" style="
+    background:#fff; color:#064749; border:none; border-radius:20px;
+    padding:5px 14px; font-weight:700; font-size:12px; cursor:pointer;
+    font-family:'DM Sans',sans-serif;
+  ">Update</button>
+</div>
+
+<!-- ══ TOP BAR ══ -->
+<div id="topbar">
+  <div class="brand">
+    <div class="brand-icon">🫀</div>
+    <div class="brand-text">
+      <div class="t1">Hemodynamic DSS — Medicover MICU</div>
+      <div class="t2">Clinical Decision Support System · Bedside Tool · v2.0</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <button type="button" id="panelToggle" onclick="togglePanel()">📡 Live Panel</button>
+    <div id="clock"></div>
+  </div>
+</div>
+
+<!-- ══ RED FLAG BANNER ══ -->
+<div id="flagBanner">
+  ⚠ URGENT PHYSIOLOGY ALERT — Immediate Clinician Review Required
+  <div class="flag-items" id="flagItems"></div>
+</div>
+
+<!-- ══ SHELL ══ -->
+<div id="shell">
+
+<!-- ══ MAIN ══ -->
+<div id="main">
+
+  <!-- PATIENT HEADER -->
+  <div id="ptHeader">
+    <div class="pt-title" style="grid-column:1/-1;">
+      <span>👤</span> Patient Information
+    </div>
+    <div class="pf"><label>Patient Name</label><input id="ptName" value="John Doe" oninput="compute()"/></div>
+    <div class="pf"><label>MRN</label><input id="ptMRN" value="48291"/></div>
+    <div class="pf"><label>Bed</label><input id="ptBed" value="3B" oninput="compute()"/></div>
+    <div class="pf"><label>Age / Sex</label><input id="ptAge" value="61 yrs / M"/></div>
+    <div class="pf"><label>Weight (kg)</label><input id="ptWt" type="number" value="70" oninput="compute()"/ inputmode="decimal"></div>
+    <div class="pf"><label>Attending</label><input id="ptDoc" value="Dr. K. Mehta"/></div>
+    <div class="pf"><label>Diagnosis</label><input id="ptDx" value="Septic Shock"/></div>
+    <div class="pf"><label>Date / Time</label><input id="ptDT"/></div>
+  </div>
+
+  <!-- SECTION TABS -->
+  <div id="tabs-wrap">
+    <div id="tabs">
+      <button type="button" class="tab active" onclick="showTab(0)"><span class="t-num">1</span>Shock</button>
+      <button type="button" class="tab" onclick="showTab(1)"><span class="t-num">2</span>Validity</button>
+      <button type="button" class="tab" onclick="showTab(2)"><span class="t-num">3</span>RUSH</button>
+      <button type="button" class="tab" onclick="showTab(3)"><span class="t-num">4</span>Phenotype</button>
+      <button type="button" class="tab" onclick="showTab(4)"><span class="t-num">5</span>Fluid Resp.</button>
+      <button type="button" class="tab" onclick="showTab(5)"><span class="t-num">6</span>Fluid Tol.</button>
+      <button type="button" class="tab" onclick="showTab(6)"><span class="t-num">7</span>Intervene</button>
+      <button type="button" class="tab" onclick="showTab(7)"><span class="t-num">8</span>Reassess</button>
+      <button type="button" class="tab t-red" onclick="showTab(8)"><span class="t-num">9</span>🚨 Flags</button>
+      <button type="button" class="tab" onclick="showTab(9)"><span class="t-num">10</span>Summary</button>
+    </div>
+  </div>
+
+  <!-- ══ S1: SHOCK SCREENING ══ -->
+  <div class="section active" id="s0">
+    <div class="card">
+      <div class="card-head">
+        <h3><span class="ico">🩺</span>Section 1 — Initial Shock Screening <span class="badge">Required</span></h3>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="field"><label>MAP (mmHg)</label><input type="number" id="s1_map" value="62" oninput="compute()"/ inputmode="decimal"></div>
+          <div class="field"><label>Systolic BP (mmHg)</label><input type="number" id="s1_sbp" value="86" oninput="compute()"/ inputmode="decimal"></div>
+          <div class="field"><label>Heart Rate (bpm)</label><input type="number" id="s1_hr" value="118" oninput="compute()"/ inputmode="decimal"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Lactate (mmol/L)</label><input type="number" id="s1_lac" step="0.1" value="4.1" oninput="compute()"/ inputmode="decimal"></div>
+          <div class="field"><label>Urine Output (mL/hr)</label><input type="number" id="s1_uo" value="16" oninput="compute()"/ inputmode="decimal"></div>
+          <div class="field"><label>CRT (sec)</label><input type="number" id="s1_crt" step="0.1" value="3.5" oninput="compute()"/ inputmode="decimal"></div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Skin Temperature</label>
+            <select id="s1_skin" onchange="compute()">
+              <option value="warm">Warm</option>
+              <option value="cool">Cool / Cold</option>
+              <option value="mottled">Mottled</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Mental Status</label>
+            <select id="s1_ms" onchange="compute()">
+              <option value="alert">Alert / Normal</option>
+              <option value="confused" selected>Confused</option>
+              <option value="lethargic">Lethargic</option>
+              <option value="unresponsive">Unresponsive</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Mottling Present?</label>
+            <div class="toggle-group">
+              <button type="button" id="mottling_yes" onclick="tog('mottling','yes')" class="sel-yes">Yes</button>
+              <button type="button" id="mottling_no" onclick="tog('mottling','no')">No</button>
+            </div>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Respiratory Distress?</label>
+            <div class="toggle-group">
+              <button type="button" id="respDist_yes" onclick="tog('respDist','yes')" class="sel-yes">Yes</button>
+              <button type="button" id="respDist_no" onclick="tog('respDist','no')">No</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Persistent Tachycardia?</label>
+            <div class="toggle-group">
+              <button type="button" id="tachy_yes" onclick="tog('tachy','yes')" class="sel-yes">Yes</button>
+              <button type="button" id="tachy_no" onclick="tog('tachy','no')">No</button>
+            </div>
+          </div>
+        </div>
+        <div id="s1_result" class="result"></div>
+        <div class="disclaimer">Shock Index auto-calculated from HR/SBP. UO threshold = 0.5 mL/kg/hr based on patient weight above.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ S2: DATA VALIDATION ══ -->
+  <div class="section" id="s1">
+    <div class="card">
+      <div class="card-head">
+        <h3><span class="ico">✅</span>Section 2 — Data Validation / Reliability</h3>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="field">
+            <label>Ventilation Mode</label>
+            <select id="s2_vent" onchange="compute()">
+              <option value="controlled" selected>Controlled MV</option>
+              <option value="pressure_support">Pressure Support / SIMV</option>
+              <option value="spontaneous">Spontaneous (Non-intubated)</option>
+            </select>
+          </div>
+          <div class="field"><label>Tidal Volume (mL/kg IBW)</label><input type="number" id="s2_vt" value="10" oninput="compute()"/ inputmode="decimal"></div>
+          <div class="field"><label>PEEP (cmH₂O)</label><input type="number" id="s2_peep" value="8" oninput="compute()"/ inputmode="decimal"></div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Cardiac Rhythm</label>
+            <select id="s2_rhythm" onchange="compute()">
+              <option value="sinus" selected>Sinus Rhythm</option>
+              <option value="af">Atrial Fibrillation</option>
+              <option value="other">Other Arrhythmia</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Spontaneous Breathing Efforts?</label>
+            <div class="toggle-group">
+              <button type="button" id="spontBreath_yes" onclick="tog('spontBreath','yes')">Yes</button>
+              <button type="button" id="spontBreath_no" onclick="tog('spontBreath','no')" class="sel-no">No</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Intra-abdominal HTN?</label>
+            <div class="toggle-group">
+              <button type="button" id="iah_yes" onclick="tog('iah','yes')">Yes</button>
+              <button type="button" id="iah_no" onclick="tog('iah','no')" class="sel-no">No</button>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Severe Pulm. Hypertension?</label>
+            <div class="toggle-group">
+              <button type="button" id="sevPH_yes" onclick="tog('sevPH','yes')">Yes</button>
+              <button type="button" id="sevPH_no" onclick="tog('sevPH','no')" class="sel-no">No</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>RV Dysfunction?</label>
+            <div class="toggle-group">
+              <button type="button" id="rvDys_yes" onclick="tog('rvDys','yes')">Yes</button>
+              <button type="button" id="rvDys_no" onclick="tog('rvDys','no')" class="sel-no">No</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Poor Echo Window?</label>
+            <div class="toggle-group">
+              <button type="button" id="poorEcho_yes" onclick="tog('poorEcho','yes')">Yes</button>
+              <button type="button" id="poorEcho_no" onclick="tog('poorEcho','no')" class="sel-no">No</button>
+            </div>
+          </div>
+        </div>
+        <div id="s2_result" class="result"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ S3: RUSH PROTOCOL ══ -->
+  <div class="section" id="s2">
+    <div class="card">
+      <div class="card-head">
+        <h3><span class="ico">🔬</span>Section 3 — RUSH Protocol Integration</h3>
+      </div>
+      <div class="card-body">
+        <div class="subtabs">
+          <button type="button" class="stab active" onclick="showStab(0)">🫀 3A — Pump (Cardiac)</button>
+          <button type="button" class="stab" onclick="showStab(1)">🪣 3B — Tank (Volume)</button>
+          <button type="button" class="stab" onclick="showStab(2)">🩸 3C — Pipes (Vascular)</button>
+          <button type="button" class="stab" onclick="showStab(3)" style="background:linear-gradient(135deg,#1A237E,#3949AB);color:#fff;border-color:transparent;">🧪 3D — ScvO₂ &amp; A–V CO₂</button>
+        </div>
+
+        <!-- 3A PUMP -->
+        <div class="sub active" id="sub0">
+          <div class="row">
+            <div class="field">
+              <label>LV Systolic Function</label>
+              <select id="s3_lv" onchange="compute()">
+                <option value="normal">Normal (EF ≥50%)</option>
+                <option value="mild">Mildly Reduced (EF 40–49%)</option>
+                <option value="moderate">Moderately Reduced (EF 30–39%)</option>
+                <option value="severe" selected>Severely Reduced (EF &lt;30%)</option>
+                <option value="hyperdynamic">Hyperdynamic (EF &gt;65%)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>RV Size</label>
+              <select id="s3_rv" onchange="compute()">
+                <option value="normal">Normal</option>
+                <option value="dilated" selected>Dilated</option>
+                <option value="severely_dilated">Severely Dilated</option>
+              </select>
+            </div>
+            <div class="field"><label>LVOT VTI — Baseline (cm)</label><input type="number" id="s3_vti_base" step="0.1" value="14.2" oninput="compute()"/ inputmode="decimal"></div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>RV Strain Signs?</label>
+              <div class="toggle-group">
+                <button type="button" id="rvStrain_yes" onclick="tog('rvStrain','yes')" class="sel-yes">Yes</button>
+                <button type="button" id="rvStrain_no" onclick="tog('rvStrain','no')">No</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Septal Flattening (D-sign)?</label>
+              <div class="toggle-group">
+                <button type="button" id="septFlat_yes" onclick="tog('septFlat','yes')" class="sel-yes">Yes</button>
+                <button type="button" id="septFlat_no" onclick="tog('septFlat','no')">No</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Pericardial Effusion?</label>
+              <div class="toggle-group">
+                <button type="button" id="periEff_yes" onclick="tog('periEff','yes')">Yes</button>
+                <button type="button" id="periEff_no" onclick="tog('periEff','no')" class="sel-no">No</button>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>Tamponade Physiology?</label>
+              <div class="toggle-group">
+                <button type="button" id="tamponade_yes" onclick="tog('tamponade','yes')">Yes</button>
+                <button type="button" id="tamponade_no" onclick="tog('tamponade','no')" class="sel-no">No</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Regional Wall Motion Abn.?</label>
+              <div class="toggle-group">
+                <button type="button" id="rwma_yes" onclick="tog('rwma','yes')">Yes</button>
+                <button type="button" id="rwma_no" onclick="tog('rwma','no')" class="sel-no">No</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Severe Valvular Disease?</label>
+              <div class="toggle-group">
+                <button type="button" id="sevValve_yes" onclick="tog('sevValve','yes')">Yes</button>
+                <button type="button" id="sevValve_no" onclick="tog('sevValve','no')" class="sel-no">No</button>
+              </div>
+            </div>
+          </div>
+          <div id="s3a_result" class="result"></div>
+        </div>
+
+        <!-- 3B TANK -->
+        <div class="sub" id="sub1">
+          <div class="row">
+            <div class="field">
+              <label>IVC Status</label>
+              <select id="s3_ivc" onchange="compute()">
+                <option value="collapsible">Collapsible (&gt;50% collapse)</option>
+                <option value="semi">Semi-collapsible (25–50%)</option>
+                <option value="plethoric" selected>Plethoric / Non-collapsible (&lt;25%)</option>
+              </select>
+            </div>
+            <div class="field"><label>IVC Distensibility Index (%)</label><input type="number" id="s3_ivcdi" step="0.1" value="11" oninput="compute()"/ inputmode="decimal"></div>
+            <div class="field">
+              <label>Lung B-lines</label>
+              <select id="s3_blines" onchange="compute()">
+                <option value="none">Absent / A-lines</option>
+                <option value="focal">Focal (&lt;3 zones)</option>
+                <option value="diffuse" selected>Diffuse (≥3 zones)</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>Pulmonary Edema on US?</label>
+              <div class="toggle-group">
+                <button type="button" id="pulEdema_yes" onclick="tog('pulEdema','yes')" class="sel-yes">Yes</button>
+                <button type="button" id="pulEdema_no" onclick="tog('pulEdema','no')">No</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Pleural Effusion?</label>
+              <div class="toggle-group">
+                <button type="button" id="pleuralEff_yes" onclick="tog('pleuralEff','yes')">Yes</button>
+                <button type="button" id="pleuralEff_no" onclick="tog('pleuralEff','no')" class="sel-no">No</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Ascites?</label>
+              <div class="toggle-group">
+                <button type="button" id="ascites_yes" onclick="tog('ascites','yes')">Yes</button>
+                <button type="button" id="ascites_no" onclick="tog('ascites','no')" class="sel-no">No</button>
+              </div>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label>Venous Congestion (hepatic/portal)?</label>
+              <div class="toggle-group">
+                <button type="button" id="venCong_yes" onclick="tog('venCong','yes')">Yes</button>
+                <button type="button" id="venCong_no" onclick="tog('venCong','no')" class="sel-no">No</button>
+              </div>
+            </div>
+            <div class="field"><label>PLR Post-VTI (cm)</label><input type="number" id="s5_plr_vti" step="0.1" value="16.2" oninput="compute()"/ inputmode="decimal"></div>
+          </div>
+          <div id="s3b_result" class="result"></div>
+        </div>
+
+        <!-- 3C PIPES -->
+        <div class="sub" id="sub2">
+          <div class="row">
+            <div class="field">
+              <label>DVT on Scan?</label>
+              <div class="toggle-group">
+                <button type="button" id="dvt_yes" onclick="tog('dvt','yes')" class="sel-yes">Yes</button>
+                <button type="button" id="dvt_no" onclick="tog('dvt','no')">No</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Pneumothorax Signs?</label>
+              <div class="toggle-group">
+                <button type="button" id="ptx_yes" onclick="tog('ptx','yes')">Yes</button>
+                <button type="button" id="ptx_no" onclick="tog('ptx','no')" class="sel-no">No</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Aortic Aneurysm / Dissection?</label>
+              <div class="toggle-group">
+                <button type="button" id="aortaAbn_yes" onclick="tog('aortaAbn','yes')">Yes</button>
+                <button type="button" id="aortaAbn_no" onclick="tog('aortaAbn','no')" class="sel-no">No</button>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>Hemorrhage / Free Fluid?</label>
+              <div class="toggle-group">
+                <button type="button" id="hemorrhage_yes" onclick="tog('hemorrhage','yes')">Yes</button>
+                <button type="button" id="hemorrhage_no" onclick="tog('hemorrhage','no')" class="sel-no">No</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>GI Bleed Evidence?</label>
+              <div class="toggle-group">
+                <button type="button" id="giBleed_yes" onclick="tog('giBleed','yes')">Yes</button>
+                <button type="button" id="giBleed_no" onclick="tog('giBleed','no')" class="sel-no">No</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Trauma History?</label>
+              <div class="toggle-group">
+                <button type="button" id="trauma_yes" onclick="tog('trauma','yes')">Yes</button>
+                <button type="button" id="trauma_no" onclick="tog('trauma','no')" class="sel-no">No</button>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>Vasodilatory State?</label>
+              <div class="toggle-group">
+                <button type="button" id="vasodil_yes" onclick="tog('vasodil','yes')" class="sel-yes">Yes</button>
+                <button type="button" id="vasodil_no" onclick="tog('vasodil','no')">No</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Pulse Pressure</label>
+              <select id="s3_pp" onchange="compute()">
+                <option value="narrow">Narrow (&lt;40 mmHg)</option>
+                <option value="normal">Normal (40–60 mmHg)</option>
+                <option value="wide" selected>Wide (&gt;60 mmHg)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Extremities</label>
+              <select id="s3_ext" onchange="compute()">
+                <option value="warm" selected>Warm</option>
+                <option value="cool">Cool / Cold</option>
+                <option value="mottled">Mottled</option>
+              </select>
+            </div>
+          </div>
+          <div id="s3c_result" class="result"></div>
+        </div>
+        <!-- 3D ScvO2 & A-V CO2 GAP -->
+        <div class="sub" id="sub3">
+          <div class="callout callout-blue">
+            <span class="callout-ico">🔬</span>
+            <span>Uses <strong>ScvO₂</strong> and the <strong>A–V CO₂ gap (PvCO₂ − PaCO₂)</strong> to phenotype adequacy of O₂ delivery and cardiac output. Integrate with RUSH findings from 3A–3C, MAP, lactate, echo, and fluid status.</span>
+          </div>
+
+          <!-- Inputs -->
+          <div class="row">
+            <div class="field"><label>ScvO₂ (%)</label><input type="number" id="sc_scvo2" step="0.1" placeholder="e.g. 65" oninput="computeScvO2()" inputmode="decimal"/></div>
+            <div class="field"><label>PvCO₂ — venous CO₂ (mmHg)</label><input type="number" id="sc_pvco2" step="0.1" placeholder="e.g. 52" oninput="computeScvO2()" inputmode="decimal"/></div>
+            <div class="field"><label>PaCO₂ — arterial CO₂ (mmHg)</label><input type="number" id="sc_paco2" step="0.1" placeholder="e.g. 40" oninput="computeScvO2()" inputmode="decimal"/></div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>A–V CO₂ Gap (mmHg) <em style="font-size:10px;color:var(--muted);">direct entry — optional</em></label>
+              <input type="number" id="sc_avco2_direct" step="0.1" placeholder="auto-calculated if PvCO₂/PaCO₂ entered" oninput="computeScvO2()" inputmode="decimal"/>
+            </div>
+            <div class="field"><label>Haemoglobin (g/dL)</label><input type="number" id="sc_hb" step="0.1" placeholder="e.g. 9.5" oninput="computeScvO2()" inputmode="decimal"/></div>
+            <div class="field"><label>LVOT VTI latest (cm)</label><input type="number" id="sc_vti" step="0.1" placeholder="e.g. 14" oninput="computeScvO2()" inputmode="decimal"/></div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>Vasopressor Support Active?</label>
+              <div class="toggle-group">
+                <button type="button" id="sc_vaso_yes" onclick="togSc('sc_vaso','yes')">Yes</button>
+                <button type="button" id="sc_vaso_no" onclick="togSc('sc_vaso','no')" class="sel-no">No</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Lactate Still Elevated?</label>
+              <div class="toggle-group">
+                <button type="button" id="sc_lac_yes" onclick="togSc('sc_lac','yes')" class="sel-yes">Yes</button>
+                <button type="button" id="sc_lac_no" onclick="togSc('sc_lac','no')">No</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>UO Adequate? (≥0.5 mL/kg/hr)</label>
+              <div class="toggle-group">
+                <button type="button" id="sc_uo_yes" onclick="togSc('sc_uo','yes')">Yes</button>
+                <button type="button" id="sc_uo_no" onclick="togSc('sc_uo','no')" class="sel-no">No</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live metric chips -->
+          <div class="metric-chips" id="sc_chips">
+            <div class="metric-chip mc-neutral" id="sc_chip_scvo2">
+              <div class="mc-label">ScvO₂</div>
+              <div class="mc-value" id="sc_val_scvo2">—</div>
+              <div class="mc-unit">%</div>
+              <div class="mc-status" id="sc_stat_scvo2" style="background:var(--border);color:var(--muted);">Enter value</div>
+            </div>
+            <div class="metric-chip mc-neutral" id="sc_chip_avco2">
+              <div class="mc-label">A–V CO₂ Gap</div>
+              <div class="mc-value" id="sc_val_avco2">—</div>
+              <div class="mc-unit">mmHg &nbsp;(PvCO₂ − PaCO₂)</div>
+              <div class="mc-status" id="sc_stat_avco2" style="background:var(--border);color:var(--muted);">Enter value</div>
+            </div>
+          </div>
+
+          <!-- Why it matters -->
+          <div class="context-box" id="sc_context">
+            <strong>ℹ Why This Matters For This Patient</strong>
+            Enter ScvO₂ and blood gas values above to generate a contextualised interpretation.
+          </div>
+
+          <!-- Interpretation result -->
+          <div id="sc_result" class="result blue">
+            <strong>Awaiting Input</strong>
+            <div style="font-size:12px;margin-top:3px;">Enter ScvO₂ and A–V CO₂ gap values above to compute interpretation.</div>
+          </div>
+
+          <!-- Phenotype support line -->
+          <div class="pheno-support" id="sc_pheno_support">
+            <span class="ps-ico">🔷</span>
+            <span id="sc_pheno_txt">Phenotype integration will appear once values are entered.</span>
+          </div>
+
+          <!-- Recommended actions -->
+          <div class="action-box" id="sc_action" style="display:none;">
+            <strong id="sc_action_title">Recommended Actions</strong>
+            <ul id="sc_action_list"></ul>
+          </div>
+
+          <!-- Pattern reference mini-guide -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;margin-top:14px;">
+            <div style="border-radius:var(--r-md);padding:10px 12px;background:var(--redl);border-left:4px solid var(--red);">
+              <div style="font-size:10.5px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">🔴 Low-Flow Pattern</div>
+              <div style="font-size:11.5px;color:#7F1D1D;line-height:1.55;">ScvO₂ &lt;70% <b>+</b> Gap &gt;6 mmHg<br>→ Low CO / Cardiogenic / Hypovolemic</div>
+            </div>
+            <div style="border-radius:var(--r-md);padding:10px 12px;background:var(--orangel);border-left:4px solid var(--orange);">
+              <div style="font-size:10.5px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">🟠 Distributive / Mixed</div>
+              <div style="font-size:11.5px;color:#7B2D00;line-height:1.55;">ScvO₂ normal/high <b>+</b> Gap &gt;6 mmHg<br>→ Septic / maldistributed flow</div>
+            </div>
+            <div style="border-radius:var(--r-md);padding:10px 12px;background:var(--yellowl);border-left:4px solid var(--yellow);">
+              <div style="font-size:10.5px;font-weight:700;color:var(--yellow);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">🟡 Isolated Low ScvO₂</div>
+              <div style="font-size:11.5px;color:#78350F;line-height:1.55;">ScvO₂ &lt;70% <b>+</b> Gap ≤6 mmHg<br>→ High extraction / anaemia / sampling</div>
+            </div>
+            <div style="border-radius:var(--r-md);padding:10px 12px;background:var(--greenl);border-left:4px solid var(--green);">
+              <div style="font-size:10.5px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">🟢 Adequate Delivery</div>
+              <div style="font-size:11.5px;color:#004D40;line-height:1.55;">ScvO₂ ≥70% <b>+</b> Gap ≤6 mmHg<br>→ Global O₂ delivery likely adequate</div>
+            </div>
+          </div>
+
+          <div class="disclaimer" style="margin-top:12px;">ScvO₂ and A–V CO₂ gap are <strong>adjunctive markers only</strong>. Must be integrated with clinical exam, echo, lactate, UO, and respiratory status. Sampling error, anaemia, hypoxemia, and sedation all affect values. Clinician verification mandatory.</div>
+        </div>
+        <!-- END sub3 -->
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ S4: PHENOTYPE ══ -->
+  <div class="section" id="s3">
+    <div class="card">
+      <div class="card-head">
+        <h3><span class="ico">🔷</span>Section 4 — Shock Phenotype Generation <span class="badge badge-auto">Auto-derived</span></h3>
+      </div>
+      <div class="card-body">
+        <div class="callout callout-tl"><span class="callout-ico">ℹ️</span>Phenotype scoring is automatically derived from Sections 1–3 inputs. No additional inputs required here.</div>
+        <div class="pheno-bars" id="s4_phenoBars"></div>
+        <div id="s4_result" class="result"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ S5: FLUID RESPONSIVENESS ══ -->
+  <div class="section" id="s4">
+    <div class="card">
+      <div class="card-head">
+        <h3><span class="ico">💧</span>Section 5 — Fluid Responsiveness Assessment</h3>
+      </div>
+      <div class="card-body">
+        <div class="callout callout-blue"><span class="callout-ico">📊</span><span><strong>Priority Order:</strong> 1. PLR + LVOT VTI (preferred) → 2. PPV (only if validated in S2) → 3. IVC DI (supportive only — never standalone)</span></div>
+        <div class="row">
+          <div class="field"><label>LVOT VTI Baseline (cm)</label><input type="number" id="s5_vti_base2" step="0.1" value="14.2" oninput="compute()"/ inputmode="decimal"></div>
+          <div class="field"><label>LVOT VTI Post-PLR (cm)</label><input type="number" id="s5_plr_vti2" step="0.1" value="16.2" oninput="compute()"/ inputmode="decimal"></div>
+          <div class="field"><label>PPV (%)</label><input type="number" id="s5_ppv" step="0.1" value="17" oninput="compute()"/ inputmode="decimal"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>IVC Distensibility Index (%)</label><input type="number" id="s5_ivcdi" step="0.1" value="11" oninput="compute()"/ inputmode="decimal"></div>
+          <div class="field">
+            <label>PLR Test Performed?</label>
+            <div class="toggle-group">
+              <button type="button" id="plrDone_yes" onclick="tog('plrDone','yes')" class="sel-yes">Yes — Performed</button>
+              <button type="button" id="plrDone_no" onclick="tog('plrDone','no')">Not Performed</button>
+            </div>
+          </div>
+        </div>
+        <div id="s5_result" class="result"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ S6: FLUID TOLERANCE ══ -->
+  <div class="section" id="s5">
+    <div class="card">
+      <div class="card-head">
+        <h3><span class="ico">🛡</span>Section 6 — Fluid Tolerance Assessment</h3>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="field">
+            <label>Lung B-lines</label>
+            <select id="s6_blines" onchange="compute()">
+              <option value="none">Absent / A-lines</option>
+              <option value="focal">Focal (&lt;3 zones)</option>
+              <option value="diffuse" selected>Diffuse (≥3 zones)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Pulmonary Edema?</label>
+            <div class="toggle-group">
+              <button type="button" id="s6_pulEdema_yes" onclick="tog('s6_pulEdema','yes')" class="sel-yes">Yes</button>
+              <button type="button" id="s6_pulEdema_no" onclick="tog('s6_pulEdema','no')">No</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Worsening Oxygenation?</label>
+            <div class="toggle-group">
+              <button type="button" id="worsO2_yes" onclick="tog('worsO2','yes')" class="sel-yes">Yes</button>
+              <button type="button" id="worsO2_no" onclick="tog('worsO2','no')">No</button>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>RV Dilation?</label>
+            <div class="toggle-group">
+              <button type="button" id="s6_rvDil_yes" onclick="tog('s6_rvDil','yes')" class="sel-yes">Yes</button>
+              <button type="button" id="s6_rvDil_no" onclick="tog('s6_rvDil','no')">No</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Septal Flattening?</label>
+            <div class="toggle-group">
+              <button type="button" id="s6_septFlat_yes" onclick="tog('s6_septFlat','yes')" class="sel-yes">Yes</button>
+              <button type="button" id="s6_septFlat_no" onclick="tog('s6_septFlat','no')">No</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Severe LV Dysfunction?</label>
+            <div class="toggle-group">
+              <button type="button" id="s6_sevLV_yes" onclick="tog('s6_sevLV','yes')" class="sel-yes">Yes</button>
+              <button type="button" id="s6_sevLV_no" onclick="tog('s6_sevLV','no')">No</button>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Venous Congestion?</label>
+            <div class="toggle-group">
+              <button type="button" id="s6_venCong_yes" onclick="tog('s6_venCong','yes')">Yes</button>
+              <button type="button" id="s6_venCong_no" onclick="tog('s6_venCong','no')" class="sel-no">No</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Hepatic Congestion?</label>
+            <div class="toggle-group">
+              <button type="button" id="s6_hepatCong_yes" onclick="tog('s6_hepatCong','yes')">Yes</button>
+              <button type="button" id="s6_hepatCong_no" onclick="tog('s6_hepatCong','no')" class="sel-no">No</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Rising CVP?</label>
+            <div class="toggle-group">
+              <button type="button" id="s6_risCVP_yes" onclick="tog('s6_risCVP','yes')">Yes</button>
+              <button type="button" id="s6_risCVP_no" onclick="tog('s6_risCVP','no')" class="sel-no">No</button>
+            </div>
+          </div>
+        </div>
+        <div id="s6_result" class="result"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ S7: INTERVENTIONS ══ -->
+  <div class="section" id="s6">
+    <div class="card">
+      <div class="card-head">
+        <h3><span class="ico">💊</span>Section 7 — Hemodynamic Intervention Recommendations <span class="badge badge-auto">Auto-derived</span></h3>
+      </div>
+      <div class="card-body">
+        <div class="callout callout-warn"><span class="callout-ico">⚕️</span>All recommendations are auto-derived from Sections 1–6. Clinician verification is mandatory before implementation.</div>
+        <div id="s7_result"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ S8: REASSESSMENT ══ -->
+  <div class="section" id="s7">
+    <div class="card">
+      <div class="card-head">
+        <h3><span class="ico">🔁</span>Section 8 — Serial Reassessment Log</h3>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="field"><label>MAP (mmHg)</label><input type="number" id="ra_map" placeholder="e.g. 62"/ inputmode="decimal"></div>
+          <div class="field"><label>HR (bpm)</label><input type="number" id="ra_hr" placeholder="e.g. 118"/ inputmode="decimal"></div>
+          <div class="field"><label>Lactate (mmol/L)</label><input type="number" id="ra_lac" step="0.1" placeholder="e.g. 4.1"/ inputmode="decimal"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>UO (mL/hr)</label><input type="number" id="ra_uo" placeholder="e.g. 16"/ inputmode="decimal"></div>
+          <div class="field"><label>LVOT VTI (cm)</label><input type="number" id="ra_vti" step="0.1" placeholder="e.g. 14.2"/ inputmode="decimal"></div>
+          <div class="field"><label>SpO₂ (%)</label><input type="number" id="ra_spo2" step="0.1" placeholder="e.g. 94"/ inputmode="decimal"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>CRT (sec)</label><input type="number" id="ra_crt" step="0.1" placeholder="e.g. 3.5"/ inputmode="decimal"></div>
+          <div class="field">
+            <label>Trigger / Event</label>
+            <select id="ra_trigger">
+              <option value="fluid_bolus">After Fluid Bolus</option>
+              <option value="vasopressor">Vasopressor Change</option>
+              <option value="clinical_change">Clinical Deterioration</option>
+              <option value="routine">Routine (30–60 min)</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-tl btn-sm" onclick="addRA()">+ Add Entry</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="clearRA()">Clear All</button>
+        </div>
+        <div class="ra-wrap" id="s8_table" style="margin-top:14px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ S9: RED FLAGS ══ -->
+  <div class="section" id="s8">
+    <div class="card">
+      <div class="card-head" style="background:linear-gradient(90deg,#FFF0F0,#fff);">
+        <h3><span class="ico" style="background:linear-gradient(135deg,#991B1B,var(--red));">🚨</span>Section 9 — Red Flag Alerts</h3>
+      </div>
+      <div class="card-body">
+        <div class="callout callout-tl"><span class="callout-ico">ℹ️</span>These alerts are auto-computed from all entered data. Patterns meeting alert thresholds are displayed below.</div>
+        <div id="s9_result"></div>
+        <div class="disclaimer">All red flag alerts require immediate clinician assessment. This tool does not replace clinical judgment.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ S10: SUMMARY ══ -->
+  <div class="section" id="s9">
+    <div class="card">
+      <div class="card-head">
+        <h3><span class="ico">📋</span>Section 10 — Final Summary Output</h3>
+      </div>
+      <div class="card-body">
+        <div class="callout callout-warn"><span class="callout-ico">⚕️</span>Comprehensive narrative integrating all 9 sections. Review and confirm with attending clinician before acting on any recommendation.</div>
+        <div id="s10_result"></div>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-tl btn-sm" onclick="printSum()">📥 Download PDF Report</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="compute()">🔄 Refresh All</button>
+        </div>
+        <div class="disclaimer">CLINICAL DISCLAIMER: This is a decision-support tool only. All clinical decisions must be verified by a qualified physician. This system does not autonomously prescribe or administer therapy.</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- ══ LIVE PANEL ══ -->
+<div id="panel">
+  <div id="panel-head">
+    <div class="pulse-dot"></div>
+    Live Decision Panel
+  </div>
+
+  <div class="p-sec p-info">
+    <div class="p-label">Patient</div>
+    <div class="p-val" id="pv_pt">John Doe · Bed 3B</div>
+  </div>
+
+  <div class="p-sec" id="pv_s1_box">
+    <div class="p-label">S1 · Shock Status</div>
+    <div class="p-val" id="pv_s1">—</div>
+  </div>
+
+  <div class="p-sec p-info" id="pv_si_box">
+    <div class="p-label">Shock Index (HR ÷ SBP)</div>
+    <div class="p-val" id="pv_si">—</div>
+  </div>
+
+  <div class="p-sec" id="pv_s2_box">
+    <div class="p-label">S2 · Index Reliability</div>
+    <div class="p-val" id="pv_s2">—</div>
+  </div>
+
+  <div class="p-sec" id="pv_s4_box">
+    <div class="p-label">S4 · Shock Phenotype</div>
+    <div class="p-val" id="pv_s4">—</div>
+  </div>
+
+  <div class="p-sec" id="pv_s5_box">
+    <div class="p-label">S5 · Fluid Responsiveness</div>
+    <div class="p-val" id="pv_s5">—</div>
+  </div>
+
+  <div class="p-sec" id="pv_s6_box">
+    <div class="p-label">S6 · Fluid Tolerance</div>
+    <div class="p-val" id="pv_s6">—</div>
+  </div>
+
+  <div class="p-sec" id="pv_s7_box">
+    <div class="p-label">S7 · Fluid Strategy</div>
+    <div class="p-val" id="pv_s7">—</div>
+  </div>
+
+  <div class="p-sec p-alert" id="pv_flags_box" style="display:none;">
+    <div class="p-label">🚨 Active Red Flags</div>
+    <div class="p-val" id="pv_flags" style="color:#FCA5A5;font-size:11.5px;"></div>
+  </div>
+
+  <div class="p-sec p-info" id="pv_sc_box" style="display:none;">
+    <div class="p-label">S11 · ScvO₂ / A–V CO₂ Gap</div>
+    <div class="p-val" id="pv_sc">—</div>
+  </div>
+
+  <div style="margin-top:12px;font-size:10px;opacity:.35;line-height:1.6;text-align:center;">
+    Panel updates in real-time.<br>All outputs are decision-support only.
+  </div>
+</div>
+
+</div><!-- /shell -->
+
+<script>
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+const T = {
+  mottling:'yes', respDist:'yes', tachy:'yes',
+  spontBreath:'no', iah:'no', sevPH:'no', rvDys:'no', poorEcho:'no',
+  rvStrain:'yes', septFlat:'yes', periEff:'no', tamponade:'no', rwma:'no', sevValve:'no',
+  pulEdema:'yes', pleuralEff:'no', ascites:'no', venCong:'no',
+  dvt:'yes', ptx:'no', aortaAbn:'no', hemorrhage:'no', giBleed:'no', trauma:'no', vasodil:'yes',
+  plrDone:'yes',
+  s6_pulEdema:'yes', worsO2:'yes', s6_rvDil:'yes', s6_septFlat:'yes', s6_sevLV:'yes',
+  s6_venCong:'no', s6_hepatCong:'no', s6_risCVP:'no',
+  // ScvO2 module toggles
+  sc_vaso:'no', sc_lac:'yes', sc_uo:'no'
+};
+
+let raRows = [];
+let lastComputed = {};
+
+// ═══════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════
+function $n(id){ const v = parseFloat(document.getElementById(id)?.value); return isNaN(v)?null:v; }
+function $s(id){ return document.getElementById(id)?.value||''; }
+function is(k){ return T[k]==='yes'; }
+function tog(k,v){
+  T[k]=v;
+  const y=document.getElementById(k+'_yes'), n=document.getElementById(k+'_no');
+  if(y) y.className = v==='yes'?'sel-yes':'';
+  if(n) n.className = v==='no'?'sel-no':'';
+  compute();
+}
+// Separate toggle handler for ScvO2 module (calls computeScvO2 only, not full compute)
+function togSc(k,v){
+  T[k]=v;
+  const y=document.getElementById(k+'_yes'), n=document.getElementById(k+'_no');
+  if(y) y.className = v==='yes'?'sel-yes':'';
+  if(n) n.className = v==='no'?'sel-no':'';
+  computeScvO2();
+}
+function li(items){ return items.length?'<ul>'+items.map(i=>`<li>${i}</li>`).join('')+'</ul>':''; }
+
+// ═══════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════
+function showTab(i){
+  document.querySelectorAll('.section').forEach((s,idx)=>s.classList.toggle('active',idx===i));
+  document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));
+}
+function showStab(i){
+  document.querySelectorAll('.sub').forEach((s,idx)=>s.classList.toggle('active',idx===i));
+  document.querySelectorAll('.stab').forEach((t,idx)=>t.classList.toggle('active',idx===i));
+}
+
+// Mobile panel toggle
+function togglePanel(){
+  const p=document.getElementById('panel');
+  p.classList.toggle('panel-open');
+  document.getElementById('panelToggle').textContent = p.classList.contains('panel-open')?'✕ Close Panel':'📡 Live Panel';
+}
+
+// ═══════════════════════════════════════════════════
+// SECTION 11 — SCVO2 & A-V CO2 GAP MODULE
+// ═══════════════════════════════════════════════════
+function computeScvO2(){
+  const scvo2  = $n('sc_scvo2');
+  const pvco2  = $n('sc_pvco2');
+  const paco2  = $n('sc_paco2');
+  const hb     = $n('sc_hb');
+  const vti    = $n('sc_vti');
+  const directGap = $n('sc_avco2_direct');
+
+  // Calculate A-V CO2 gap: prefer direct entry, else calculate from gases
+  let avco2 = null;
+  let avco2Source = '';
+  if(directGap !== null){
+    avco2 = directGap;
+    avco2Source = 'Direct entry';
+  } else if(pvco2 !== null && paco2 !== null){
+    avco2 = parseFloat((pvco2 - paco2).toFixed(1));
+    avco2Source = `PvCO₂ ${pvco2} − PaCO₂ ${paco2}`;
+  }
+
+  const hasData = scvo2 !== null || avco2 !== null;
+
+  // ── Update metric chips ──────────────────────────
+  const chipScvo2 = document.getElementById('sc_chip_scvo2');
+  const valScvo2  = document.getElementById('sc_val_scvo2');
+  const statScvo2 = document.getElementById('sc_stat_scvo2');
+  const chipAvco2 = document.getElementById('sc_chip_avco2');
+  const valAvco2  = document.getElementById('sc_val_avco2');
+  const statAvco2 = document.getElementById('sc_stat_avco2');
+
+  // ScvO2 chip
+  if(scvo2 !== null){
+    valScvo2.textContent = scvo2.toFixed(1);
+    if(scvo2 < 60){
+      chipScvo2.className='metric-chip mc-red';
+      statScvo2.textContent='Critically Low (<60%)';
+      statScvo2.style.cssText='';
+    } else if(scvo2 < 70){
+      chipScvo2.className='metric-chip mc-yellow';
+      statScvo2.textContent='Low (60–70%)';
+      statScvo2.style.cssText='';
+    } else if(scvo2 <= 80){
+      chipScvo2.className='metric-chip mc-green';
+      statScvo2.textContent='Normal (70–80%)';
+      statScvo2.style.cssText='';
+    } else {
+      chipScvo2.className='metric-chip mc-yellow';
+      statScvo2.textContent='Elevated (>80%) — Distributive?';
+      statScvo2.style.cssText='';
+    }
+  } else {
+    chipScvo2.className='metric-chip mc-neutral';
+    valScvo2.textContent='—';
+    statScvo2.textContent='Enter value';
+    statScvo2.style.background='var(--border)';statScvo2.style.color='var(--muted)';
+  }
+
+  // AvCO2 chip
+  if(avco2 !== null){
+    valAvco2.textContent = avco2.toFixed(1);
+    if(avco2 > 6){
+      chipAvco2.className='metric-chip mc-red';
+      statAvco2.textContent='Elevated (>6 mmHg)';
+      statAvco2.style.cssText='';
+    } else if(avco2 >= 4){
+      chipAvco2.className='metric-chip mc-yellow';
+      statAvco2.textContent='Borderline (4–6 mmHg)';
+      statAvco2.style.cssText='';
+    } else {
+      chipAvco2.className='metric-chip mc-green';
+      statAvco2.textContent='Normal (≤4 mmHg)';
+      statAvco2.style.cssText='';
+    }
+    if(avco2Source.includes('−')){
+      document.getElementById('sc_val_avco2').title = `Calculated: ${avco2Source}`;
+    }
+  } else {
+    chipAvco2.className='metric-chip mc-neutral';
+    valAvco2.textContent='—';
+    statAvco2.textContent='Enter PvCO₂ / PaCO₂';
+    statAvco2.style.background='var(--border)';statAvco2.style.color='var(--muted)';
+  }
+
+  if(!hasData){
+    document.getElementById('sc_result').className='result blue';
+    document.getElementById('sc_result').innerHTML='<strong>Awaiting Input</strong><div style="font-size:12px;margin-top:3px;">Enter ScvO₂ and A–V CO₂ gap values above to compute interpretation.</div>';
+    document.getElementById('sc_context').innerHTML='<strong>ℹ Why This Matters For This Patient</strong>Enter ScvO₂ and blood gas values above to generate a contextualised interpretation.';
+    document.getElementById('sc_pheno_txt').textContent='Phenotype integration will appear once values are entered.';
+    document.getElementById('sc_action').style.display='none';
+    lastComputed.sc_pattern='none'; lastComputed.sc_summary='—';
+    return;
+  }
+
+  // ── Pattern classification ───────────────────────
+  const scvLow  = scvo2 !== null && scvo2 < 70;
+  const scvHigh = scvo2 !== null && scvo2 > 80;
+  const scvNorm = scvo2 !== null && scvo2 >= 70 && scvo2 <= 80;
+  const gapHigh = avco2 !== null && avco2 > 6;
+  const gapBorder = avco2 !== null && avco2 >= 4 && avco2 <= 6;
+  const gapNorm = avco2 !== null && avco2 < 4;
+
+  // Pull context from prior sections
+  const lv = $s('s3_lv');
+  const ivc = $s('s3_ivc');
+  const bl = $s('s3_blines');
+  const pheLabel = lastComputed.pheLabel || '';
+  const fluidResp = lastComputed.s5_resp || 'uncertain';
+  const fluidTol  = lastComputed.s6_tol  || '—';
+  const lacHigh   = T.sc_lac === 'yes';
+  const uoLow     = T.sc_uo  === 'no';
+  const onVaso    = T.sc_vaso === 'yes';
+  const anaemia   = hb !== null && hb < 8;
+
+  let pattern='', resultCls='', mainText='', reasons=[], actions=[], contextText='', phenoText='';
+
+  // ── PATTERN LOGIC ────────────────────────────────
+  if(scvLow && gapHigh){
+    // Pattern A: Low-flow shock
+    pattern = 'low_flow';
+    resultCls = 'red';
+    mainText = 'Low-Flow Shock Physiology — Likely';
+    reasons.push(`ScvO₂ ${scvo2}% &lt;70% — inadequate O₂ delivery or extraction`);
+    reasons.push(`A–V CO₂ gap ${avco2} mmHg &gt;6 — reduced cardiac output / poor tissue perfusion`);
+    if(anaemia) reasons.push(`Haemoglobin ${hb} g/dL — severe anaemia contributing to low O₂ delivery`);
+    if(vti !== null && vti < 16) reasons.push(`LVOT VTI ${vti} cm — low cardiac output confirmed`);
+    if(ivc === 'collapsible') reasons.push('Collapsible IVC — hypovolemic contribution likely');
+    if(lv === 'severe' || lv === 'moderate') reasons.push('Reduced LV function — cardiogenic contribution likely');
+    contextText = 'Both ScvO₂ and A–V CO₂ gap indicate poor forward flow and inadequate oxygen delivery. This is the pattern of hypovolemic, haemorrhagic, or cardiogenic shock — or a combination. The heart is not delivering enough blood to meet tissue demands.';
+    // Phenotype mapping
+    if(lv === 'severe' || lv === 'moderate') phenoText = 'Supports Cardiogenic Shock physiology — consider inotrope, avoid excess fluid';
+    else if(ivc === 'collapsible') phenoText = 'Supports Hypovolemic / Haemorrhagic Shock — assess fluid/blood responsiveness';
+    else phenoText = 'Supports Low-Flow Shock — differentiate cardiogenic vs hypovolemic with RUSH';
+    // Actions
+    actions.push('Assess fluid responsiveness (PLR + LVOT VTI — Section 5)');
+    actions.push(fluidResp === 'likely' && fluidTol !== 'Not Fluid Tolerant' ?
+      'Fluid responsive: cautious 250 mL crystalloid challenge with immediate reassessment' :
+      fluidResp === 'likely' && fluidTol === 'Not Fluid Tolerant' ?
+      'Fluid responsive BUT not tolerant — prioritise vasopressor/inotrope over further fluid' :
+      'Fluid responsiveness uncertain or unlikely — do NOT give empirical fluids');
+    if(anaemia) actions.push('Consider blood product transfusion — Hb &lt;8 g/dL compromising O₂ delivery');
+    if(lv === 'severe' || lv === 'moderate') actions.push('Consider inotropic support (dobutamine) for cardiogenic low-output state');
+    if(onVaso) actions.push('Vasopressor active — ensure adequate MAP ≥65 mmHg; titrate to organ perfusion');
+    actions.push('Repeat ScvO₂ and LVOT VTI after each intervention to track response');
+
+  } else if((scvNorm || scvHigh) && gapHigh){
+    // Pattern B: Distributive / mixed
+    pattern = 'distributive';
+    resultCls = 'orange';
+    mainText = 'Distributive / Mixed Shock Pattern — Likely';
+    reasons.push(`ScvO₂ ${scvo2!==null?scvo2+'%':'not entered'} — normal or elevated (peripheral shunting / maldistributed flow)`);
+    reasons.push(`A–V CO₂ gap ${avco2} mmHg &gt;6 — persistent tissue hypoperfusion despite apparent O₂ delivery`);
+    if(lacHigh) reasons.push('Lactate still elevated — ongoing anaerobic metabolism / tissue underperfusion');
+    if(uoLow) reasons.push('Urine output inadequate — renal perfusion still compromised');
+    contextText = 'A normal or high ScvO₂ with an elevated A–V CO₂ gap suggests blood is being distributed unevenly — some tissues are over-perfused while others remain hypoxic. This is characteristic of septic/distributive shock or microcirculatory dysfunction. Do not assume resuscitation is complete.';
+    phenoText = 'Supports Septic / Distributive Shock — consider norepinephrine, source control, cautious fluids only if responsive and tolerant';
+    actions.push('Do NOT assume resuscitation is complete — reassess phenotype with RUSH, VTI, lung ultrasound');
+    actions.push('Consider norepinephrine if MAP &lt;65 mmHg or vasoplegic state confirmed');
+    if(fluidResp === 'likely' && fluidTol !== 'Not Fluid Tolerant')
+      actions.push('Fluid responsive: limited 250 mL challenge; reassess immediately after');
+    else
+      actions.push('Avoid further empirical fluid boluses — risk of congestion without benefit');
+    actions.push('Source control, targeted antibiotics if sepsis suspected');
+    actions.push('Repeat lactate and urine output at 1–2 hour intervals to track tissue perfusion');
+
+  } else if(scvLow && (gapNorm || gapBorder)){
+    // Pattern C: Increased extraction / isolated low ScvO2
+    pattern = 'extraction';
+    resultCls = 'yellow';
+    mainText = 'Increased O₂ Extraction — Interpret With Caution';
+    reasons.push(`ScvO₂ ${scvo2}% &lt;70% — increased extraction or reduced delivery`);
+    reasons.push(`A–V CO₂ gap ${avco2 !== null ? avco2+' mmHg (≤6)' : 'normal/not elevated'} — cardiac output may be relatively preserved`);
+    if(anaemia) reasons.push(`Haemoglobin ${hb} g/dL — anaemia reducing O₂ carrying capacity`);
+    contextText = 'Low ScvO₂ without an elevated A–V CO₂ gap may indicate increased oxygen demand, anaemia, hypoxemia, or a sampling issue. This pattern requires clinical correlation — the cardiac output may not be severely reduced, but O₂ delivery may be insufficient for the patient\'s metabolic needs.';
+    phenoText = 'Pattern inconclusive — consider anaemia, hypoxemia, high metabolic demand, or sampling error';
+    actions.push('⚠ Interpret with clinical context — this pattern is non-specific');
+    if(anaemia) actions.push('Address anaemia — consider transfusion if Hb &lt;7–8 g/dL and haemodynamically compromised');
+    actions.push('Check SpO₂ / PaO₂ — hypoxemia reduces arterial O₂ content independently of cardiac output');
+    actions.push('Verify sampling technique — ScvO₂ requires properly positioned central venous catheter');
+    actions.push('Repeat ABG and VBG to confirm values before acting');
+
+  } else if((scvNorm || scvHigh) && gapNorm){
+    // Pattern D: Apparently adequate
+    pattern = 'adequate';
+    resultCls = 'green';
+    mainText = 'Apparently Adequate Global O₂ Delivery';
+    reasons.push(`ScvO₂ ${scvo2 !== null ? scvo2+'%' : 'normal range'} — adequate O₂ extraction ratio`);
+    reasons.push(`A–V CO₂ gap ${avco2 !== null ? avco2+' mmHg' : 'normal'} ≤6 — cardiac output likely adequate`);
+    if(lacHigh) reasons.push('⚠ Lactate still elevated — do NOT exclude occult hypoperfusion based on ScvO₂/gap alone');
+    if(uoLow) reasons.push('⚠ Urine output still inadequate — renal perfusion not normalised');
+    contextText = 'Normal ScvO₂ and A–V CO₂ gap suggest global oxygen delivery may be adequate at this time. However, this does not exclude localised tissue hypoperfusion, microcirculatory dysfunction, or occult shock. Continue integrating lactate, urine output, echo, and clinical examination.';
+    phenoText = 'Global delivery appears adequate — continue monitoring; do not exclude shock based on this alone';
+    actions.push('Continue monitoring: lactate trend, urine output, MAP, echo');
+    if(lacHigh) actions.push('⚠ Persistent hyperlactataemia despite normal indices — reassess phenotype; consider occult hypoperfusion');
+    actions.push('Reassess at 1–2 hour intervals or after any clinical change');
+
+  } else {
+    // Partial data
+    pattern = 'partial';
+    resultCls = 'blue';
+    mainText = 'Partial Data — Interpretation Limited';
+    if(scvo2 !== null) reasons.push(`ScvO₂ ${scvo2}% entered`);
+    if(avco2 !== null) reasons.push(`A–V CO₂ gap ${avco2} mmHg entered`);
+    reasons.push('Enter both ScvO₂ AND A–V CO₂ gap for full pattern interpretation');
+    contextText = 'Complete pattern interpretation requires both ScvO₂ and A–V CO₂ gap values. Enter the remaining value above.';
+    phenoText = 'Insufficient data for phenotype integration';
+  }
+
+  // ── Render results ───────────────────────────────
+  const resEl = document.getElementById('sc_result');
+  resEl.className = `result ${resultCls}`;
+  resEl.innerHTML = `<strong>${mainText}</strong>${li(reasons)}`;
+
+  document.getElementById('sc_context').innerHTML =
+    `<strong>ℹ Why This Matters For This Patient</strong>${contextText}`;
+
+  document.getElementById('sc_pheno_txt').innerHTML =
+    `<strong>Phenotype Integration:</strong> ${phenoText}`;
+
+  const actionEl = document.getElementById('sc_action');
+  if(actions.length > 0){
+    actionEl.style.display = 'block';
+    document.getElementById('sc_action_title').textContent = 'Recommended Actions Based on This Pattern';
+    document.getElementById('sc_action_list').innerHTML = actions.map(a=>`<li>${a}</li>`).join('');
+    // colour action box border based on pattern
+    actionEl.style.borderLeftColor =
+      pattern==='low_flow'?'var(--red)':
+      pattern==='distributive'?'var(--orange)':
+      pattern==='extraction'?'var(--yellow)':
+      pattern==='adequate'?'var(--green)':'var(--tl)';
+  } else {
+    actionEl.style.display = 'none';
+  }
+
+  // Store for panel and summary
+  lastComputed.sc_pattern  = pattern;
+  lastComputed.sc_mainText = mainText;
+  lastComputed.sc_scvo2    = scvo2;
+  lastComputed.sc_avco2    = avco2;
+  lastComputed.sc_phenoTxt = phenoText;
+  lastComputed.sc_summary  = `ScvO₂: ${scvo2!==null?scvo2+'%':'—'} | A–V CO₂ Gap: ${avco2!==null?avco2+' mmHg':'—'} | ${mainText}`;
+
+  // Update panel card
+  const pvScBox = document.getElementById('pv_sc_box');
+  const pvSc    = document.getElementById('pv_sc');
+  pvScBox.style.display = 'block';
+  pvSc.innerHTML =
+    `ScvO₂: <b>${scvo2!==null?scvo2+'%':'—'}</b> | Gap: <b>${avco2!==null?avco2+' mmHg':'—'}</b><small>${mainText}</small>`;
+  pvScBox.className = 'p-sec ' +
+    (pattern==='low_flow'?'p-alert':
+     pattern==='distributive'?'p-warn':
+     pattern==='adequate'?'p-ok':'p-info');
+}
+
+// ═══════════════════════════════════════════════════
+// SECTION 1 — SHOCK SCREENING
+// ═══════════════════════════════════════════════════
+function computeS1(){
+  const map=$n('s1_map'), sbp=$n('s1_sbp'), hr=$n('s1_hr');
+  const lac=$n('s1_lac'), uo=$n('s1_uo'), crt=$n('s1_crt');
+  const wt=$n('ptWt')||70;
+  const skin=$s('s1_skin'), ms=$s('s1_ms');
+  const si = (hr&&sbp&&sbp>0)?(hr/sbp):null;
+
+  const criteria=[];
+  if(map!==null && map<65) criteria.push(`MAP ${map} mmHg — below threshold (&lt;65 mmHg)`);
+  if(lac!==null && lac>2) criteria.push(`Lactate ${lac} mmol/L — elevated (&gt;2 mmol/L)`);
+  const uoThresh = wt*0.5;
+  if(uo!==null && uo<uoThresh) criteria.push(`Urine output ${uo} mL/hr — below ${uoThresh.toFixed(0)} mL/hr (0.5 mL/kg/hr for ${wt}kg)`);
+  if(ms==='confused'||ms==='lethargic'||ms==='unresponsive') criteria.push(`Altered mentation — ${ms}`);
+  if(crt!==null && crt>2) criteria.push(`CRT ${crt}s — prolonged (&gt;2 sec)`);
+  if(is('mottling')) criteria.push('Mottling / cold extremities present');
+  if(skin==='cool'||skin==='mottled') criteria.push(`Skin: ${skin} extremities`);
+  if(is('tachy')) criteria.push('Persistent tachycardia reported');
+  if(si!==null && si>1) criteria.push(`Shock Index ${si.toFixed(2)} — elevated (&gt;1)`);
+  if(is('respDist')) criteria.push('Respiratory distress present');
+
+  let status, cls;
+  if(criteria.length>=3){ status='Shock / Hypoperfusion Likely'; cls='red'; }
+  else if(criteria.length>=1){ status='Occult Hypoperfusion Possible'; cls='orange'; }
+  else { status='Shock Not Clearly Present — Monitor and Reassess'; cls='green'; }
+
+  const siSev = si!==null && si>1.5?' ⚠ Severe (&gt;1.5)':'';
+  let html=`<strong>${status}</strong>`;
+  if(si!==null) html+=`<div style="margin:5px 0;font-size:12px;">Shock Index: <b style="font-family:'DM Mono',monospace;">${si.toFixed(2)}</b>${siSev}</div>`;
+  if(criteria.length) html+=`<div style="font-size:12px;margin-top:4px;font-weight:700;">Criteria Met (${criteria.length}):</div>${li(criteria)}`;
+  else html+=`<div style="font-size:12px;margin-top:4px;">No shock criteria currently met. Continue routine monitoring.</div>`;
+
+  document.getElementById('s1_result').className=`result ${cls}`;
+  document.getElementById('s1_result').innerHTML=html;
+  lastComputed.s1_status=status; lastComputed.s1_cls=cls;
+  lastComputed.si=si; lastComputed.criteria=criteria;
+  return {status,cls,si,criteria,map,lac,uo,hr,crt,wt,uoThresh};
+}
+
+// ═══════════════════════════════════════════════════
+// SECTION 2 — DATA VALIDATION
+// ═══════════════════════════════════════════════════
+function computeS2(){
+  const vent=$s('s2_vent'), vt=$n('s2_vt'), peep=$n('s2_peep'), rhythm=$s('s2_rhythm');
+
+  let ppvValid=false;
+  const ppvReasons=[];
+  if(vent!=='controlled') ppvReasons.push('Not on controlled MV (PPV requires controlled MV)');
+  if(rhythm!=='sinus') ppvReasons.push(`Rhythm: ${rhythm} (PPV requires sinus rhythm)`);
+  if(vt===null||vt<8) ppvReasons.push(`Tidal volume ${vt??'?'} mL/kg — must be ≥8 mL/kg IBW`);
+  if(is('spontBreath')) ppvReasons.push('Spontaneous breathing efforts present (invalidates PPV)');
+  ppvValid = ppvReasons.length===0;
+
+  const ivcCautions=[];
+  if(peep!==null && peep>10) ivcCautions.push(`PEEP ${peep} cmH₂O — high PEEP reduces IVC reliability`);
+  if(is('iah')) ivcCautions.push('Intra-abdominal hypertension present');
+  if(is('rvDys')) ivcCautions.push('RV dysfunction — IVC may be plethoric regardless of volume status');
+  if(is('sevPH')) ivcCautions.push('Severe pulmonary hypertension — alters IVC behaviour');
+
+  let html='', cls='';
+  if(ppvValid && ivcCautions.length===0){
+    cls='green';
+    html=`<strong>Dynamic Indices Reliable</strong><div style="font-size:12px;margin-top:4px;">PPV/SVV: Valid ✓ | IVC: Reliable ✓<br>All dynamic index criteria met.</div>`;
+  } else if(ppvValid && ivcCautions.length>0){
+    cls='orange';
+    html=`<strong>PPV Reliable — IVC Interpret Cautiously</strong>${li(ivcCautions)}`;
+  } else if(!ppvValid && ivcCautions.length===0){
+    cls='orange';
+    html=`<strong>Prefer PLR + LVOT VTI — PPV Not Reliable</strong>${li(ppvReasons)}`;
+  } else {
+    cls='red';
+    html=`<strong>Dynamic Indices Partially Reliable — Use PLR + LVOT VTI</strong>
+    <div style="font-size:12px;font-weight:700;margin-top:4px;">PPV Invalid:</div>${li(ppvReasons)}
+    <div style="font-size:12px;font-weight:700;margin-top:4px;">IVC Cautions:</div>${li(ivcCautions)}`;
+  }
+  if(is('poorEcho')) html+=`<div style="font-size:12px;margin-top:6px;font-weight:600;">⚠ Poor echo window — echo-derived indices may be unreliable.</div>`;
+
+  document.getElementById('s2_result').className=`result ${cls}`;
+  document.getElementById('s2_result').innerHTML=html;
+  lastComputed.ppvValid=ppvValid; lastComputed.ivcCautions=ivcCautions; lastComputed.ppvReasons=ppvReasons;
+  return {ppvValid,ivcCautions,ppvReasons};
+}
+
+// ═══════════════════════════════════════════════════
+// SECTION 3 — RUSH PROTOCOL
+// ═══════════════════════════════════════════════════
+function computeS3(){
+  const lv=$s('s3_lv'), rv=$s('s3_rv');
+  const ivc=$s('s3_ivc'), bl=$s('s3_blines'), pp=$s('s3_pp'), ext=$s('s3_ext');
+
+  // 3A PUMP
+  const pumpFindings=[];
+  if(lv==='severe'||lv==='moderate') pumpFindings.push('Reduced LV function → Cardiogenic physiology possible');
+  if(lv==='hyperdynamic') pumpFindings.push('Hyperdynamic LV (small, hyperkinetic) → Distributive / hypovolemic physiology');
+  if((rv==='dilated'||rv==='severely_dilated') && is('septFlat')) pumpFindings.push('RV dilation + septal flattening → Obstructive physiology / PE possible');
+  if(is('periEff') && is('tamponade')) pumpFindings.push('Pericardial effusion with RA/RV collapse → Tamponade physiology — URGENT');
+  if(is('rvStrain')) pumpFindings.push('RV strain pattern present → Pulmonary embolism / acute cor pulmonale possible');
+  if(is('rwma')) pumpFindings.push('Regional wall motion abnormality → ACS / ischaemic cardiogenic possible');
+  if(is('sevValve')) pumpFindings.push('Severe valvular disease → Valvular cardiogenic shock possible');
+
+  const r3a_cls = pumpFindings.length>2?'red':pumpFindings.length>0?'orange':'green';
+  document.getElementById('s3a_result').className=`result ${r3a_cls}`;
+  document.getElementById('s3a_result').innerHTML=`<strong>3A Pump — ${pumpFindings.length>0?'Abnormalities Detected':'Normal Pump'}</strong>${li(pumpFindings)}`;
+
+  // 3B TANK
+  const tankFindings=[];
+  if(ivc==='collapsible' && bl==='none') tankFindings.push('Collapsible IVC + dry lungs (A-lines) → Preload depletion likely');
+  if(ivc==='plethoric' && bl==='diffuse') tankFindings.push('Plethoric IVC + diffuse B-lines → Fluid intolerance / congestion');
+  if(bl==='diffuse' && (lv==='severe'||lv==='moderate')) tankFindings.push('Diffuse B-lines + low EF → Cardiogenic pulmonary oedema');
+  if(ivc==='collapsible' && is('vasodil')) tankFindings.push('Empty tank + vasodilatory profile → Distributive shock');
+  if(is('pulEdema')) tankFindings.push('Pulmonary oedema on ultrasound');
+  if(is('pleuralEff')) tankFindings.push('Pleural effusion present');
+  if(is('ascites')) tankFindings.push('Ascites present → Raised intra-abdominal pressure risk');
+  if(is('venCong')) tankFindings.push('Hepatic/portal venous congestion → Venous hypertension');
+
+  const r3b_cls = tankFindings.length>2?'red':tankFindings.length>0?'orange':'green';
+  document.getElementById('s3b_result').className=`result ${r3b_cls}`;
+  document.getElementById('s3b_result').innerHTML=`<strong>3B Tank — ${tankFindings.length>0?'Volume/Congestion Findings':'No Tank Abnormalities'}</strong>${li(tankFindings)}`;
+
+  // 3C PIPES
+  const pipeFindings=[];
+  if(is('dvt') && is('rvStrain')) pipeFindings.push('DVT + RV strain → High suspicion Pulmonary Embolism');
+  if(is('hemorrhage')||is('giBleed')||is('trauma')) pipeFindings.push('Haemorrhage evidence / GI bleed / trauma → Haemorrhagic shock possible');
+  if(is('ptx')) pipeFindings.push('Pneumothorax signs (absent lung sliding) + hypotension → Tension PTX possible — URGENT');
+  if(ext==='warm' && pp==='wide') pipeFindings.push('Warm extremities + wide pulse pressure → Distributive / septic physiology');
+  if(is('aortaAbn')) pipeFindings.push('Aortic aneurysm / dissection signs → Urgent vascular evaluation');
+  if(is('vasodil') && !is('hemorrhage')) pipeFindings.push('Vasodilated state → Septic / anaphylactic / neurogenic aetiology');
+
+  const r3c_cls = pipeFindings.length>2?'red':pipeFindings.length>0?'orange':'green';
+  document.getElementById('s3c_result').className=`result ${r3c_cls}`;
+  document.getElementById('s3c_result').innerHTML=`<strong>3C Pipes — ${pipeFindings.length>0?'Vascular Findings Noted':'No Pipe Abnormalities'}</strong>${li(pipeFindings)}`;
+
+  lastComputed.pumpFindings=pumpFindings; lastComputed.tankFindings=tankFindings; lastComputed.pipeFindings=pipeFindings;
+  return {pumpFindings,tankFindings,pipeFindings};
+}
+
+// ═══════════════════════════════════════════════════
+// SECTION 4 — PHENOTYPE
+// ═══════════════════════════════════════════════════
+function computeS4(){
+  const lv=$s('s3_lv'), rv=$s('s3_rv');
+  const ivc=$s('s3_ivc'), bl=$s('s3_blines'), ext=$s('s3_ext'), pp=$s('s3_pp');
+  const lac=$n('s1_lac')||0;
+
+  let scores={hypo:0,haemo:0,septic:0,cardio:0,obstr:0};
+  let reasons={hypo:[],haemo:[],septic:[],cardio:[],obstr:[]};
+
+  if(ivc==='collapsible'){scores.hypo+=3;reasons.hypo.push('Collapsible IVC');}
+  if(bl==='none'){scores.hypo+=2;reasons.hypo.push('Dry lungs (A-lines)');}
+  if(lv==='hyperdynamic'){scores.hypo+=2;reasons.hypo.push('Hyperdynamic LV (small cavity)');}
+  if(!is('vasodil')){scores.hypo+=1;reasons.hypo.push('No vasodilation');}
+  if(!is('hemorrhage')&&!is('giBleed')&&!is('trauma')){scores.hypo+=1;reasons.hypo.push('No haemorrhage signs');}
+
+  if(is('hemorrhage')){scores.haemo+=4;reasons.haemo.push('Free fluid / haemorrhage on US');}
+  if(is('giBleed')){scores.haemo+=3;reasons.haemo.push('GI bleed evidence');}
+  if(is('trauma')){scores.haemo+=3;reasons.haemo.push('Trauma history');}
+  if(ivc==='collapsible'){scores.haemo+=2;reasons.haemo.push('Collapsible IVC (volume depletion)');}
+
+  if(is('vasodil')){scores.septic+=3;reasons.septic.push('Vasodilated state');}
+  if(ext==='warm'){scores.septic+=2;reasons.septic.push('Warm extremities');}
+  if(pp==='wide'){scores.septic+=2;reasons.septic.push('Wide pulse pressure');}
+  if(lv==='hyperdynamic'){scores.septic+=2;reasons.septic.push('Hyperdynamic LV');}
+  if(lac>2){scores.septic+=2;reasons.septic.push(`Elevated lactate (${lac} mmol/L)`);}
+
+  if(lv==='severe'){scores.cardio+=4;reasons.cardio.push('Severely reduced LV function');}
+  else if(lv==='moderate'){scores.cardio+=3;reasons.cardio.push('Moderately reduced LV function');}
+  if(bl==='diffuse'){scores.cardio+=3;reasons.cardio.push('Diffuse B-lines / pulmonary oedema');}
+  if(ivc==='plethoric'){scores.cardio+=2;reasons.cardio.push('Plethoric IVC (elevated filling pressure)');}
+  if(is('rwma')){scores.cardio+=2;reasons.cardio.push('Regional wall motion abnormality');}
+  if(is('sevValve')){scores.cardio+=2;reasons.cardio.push('Severe valvular disease');}
+
+  if(is('tamponade')){scores.obstr+=5;reasons.obstr.push('Tamponade physiology (RA/RV collapse)');}
+  if(is('dvt')&&is('rvStrain')){scores.obstr+=4;reasons.obstr.push('DVT + RV strain → PE');}
+  if(is('ptx')){scores.obstr+=4;reasons.obstr.push('Pneumothorax pattern');}
+  if((rv==='dilated'||rv==='severely_dilated')&&is('septFlat')){scores.obstr+=3;reasons.obstr.push('RV dilation + septal flattening');}
+  if(ivc==='plethoric'&&(is('rvStrain')||is('tamponade'))){scores.obstr+=2;reasons.obstr.push('Plethoric IVC with RV/tamponade');}
+
+  const maxScores={hypo:9,haemo:12,septic:11,cardio:13,obstr:14};
+  const norm={};
+  Object.keys(scores).forEach(k=>norm[k]=Math.min(10,Math.round((scores[k]/maxScores[k])*10)));
+
+  const sorted=Object.entries(norm).sort((a,b)=>b[1]-a[1]);
+  const top=sorted[0]; const second=sorted[1];
+  const mixed=top[1]>=4&&second[1]>=4;
+
+  const labels={hypo:'Hypovolemic',haemo:'Haemorrhagic',septic:'Septic / Distributive',cardio:'Cardiogenic',obstr:'Obstructive'};
+  const barColors={hypo:'#1565C0',haemo:'#C62828',septic:'#E67E22',cardio:'#6A1B9A',obstr:'#00838F'};
+
+  let barsHtml='<div class="pheno-bars">';
+  sorted.forEach(([k,v])=>{
+    barsHtml+=`<div class="pheno-bar">
+      <div class="pb-head">
+        <span class="pb-name">${labels[k]}</span>
+        <span class="pb-score">${v}/10</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${v*10}%;background:${barColors[k]};"></div></div>
+    </div>`;
+  });
+  barsHtml+='</div>';
+  document.getElementById('s4_phenoBars').innerHTML=barsHtml;
+
+  let pheLabel='', pheCls='', pheReason='', confidence='';
+  if(mixed){
+    pheLabel=`Likely mixed ${labels[top[0]]} + ${labels[second[0]]} physiology`;
+    pheCls='orange';
+    confidence=top[1]>=7?'Moderate confidence':'Low confidence';
+    pheReason=`${labels[top[0]]} reasons: ${reasons[top[0]].join(', ')}. ${labels[second[0]]} reasons: ${reasons[second[0]].join(', ')}.`;
+  } else if(top[1]>=6){
+    pheLabel=`Likely ${labels[top[0]]} shock`;
+    pheCls=top[1]>=8?'red':'orange';
+    confidence=top[1]>=8?'High confidence':'Moderate confidence';
+    pheReason=`Reasons: ${reasons[top[0]].join(', ')}.`;
+  } else if(top[1]>=3){
+    pheLabel=`Possible ${labels[top[0]]} aetiology`;
+    pheCls='yellow';
+    confidence='Low confidence — data insufficient for definitive classification';
+    pheReason=`Partial evidence: ${reasons[top[0]].join(', ')}.`;
+  } else {
+    pheLabel='Undifferentiated shock — insufficient phenotype data';
+    pheCls='blue';
+    confidence='Data insufficient';
+    pheReason='Enter more clinical and echo data to improve classification.';
+  }
+
+  document.getElementById('s4_result').className=`result ${pheCls}`;
+  document.getElementById('s4_result').innerHTML=`<strong>${pheLabel}</strong>
+    <div style="font-size:12px;margin-top:3px;font-weight:700;">${confidence}</div>
+    <div style="font-size:12px;margin-top:3px;">${pheReason}</div>`;
+  lastComputed.pheLabel=pheLabel; lastComputed.pheCls=pheCls; lastComputed.confidence=confidence;
+  return {norm,labels,pheLabel,confidence,scores,mixed,top,second};
+}
+
+// ═══════════════════════════════════════════════════
+// SECTION 5 — FLUID RESPONSIVENESS
+// ═══════════════════════════════════════════════════
+function computeS5(s2){
+  const vtiBase=$n('s5_vti_base2')||$n('s3_vti_base');
+  const vtiPlr=$n('s5_plr_vti2')||$n('s5_plr_vti');
+  const ppv=$n('s5_ppv');
+  const ivcdi=$n('s5_ivcdi')||$n('s3_ivcdi');
+  const {ppvValid}=s2;
+
+  let resp='uncertain', cls='yellow', reasons=[], warnings=[];
+
+  if(is('plrDone') && vtiBase && vtiPlr && vtiBase>0){
+    const delta=((vtiPlr-vtiBase)/vtiBase)*100;
+    if(delta>=10){
+      resp='likely'; cls='green';
+      reasons.push(`PLR+VTI: Δ${delta.toFixed(1)}% ≥10% → Fluid responsiveness likely`);
+    } else {
+      resp='unlikely'; cls='red';
+      reasons.push(`PLR+VTI: Δ${delta.toFixed(1)}% &lt;10% → Fluid responsiveness unlikely by PLR`);
+    }
+  } else if(is('plrDone') && (!vtiBase||!vtiPlr)){
+    warnings.push('PLR test selected but VTI values incomplete — enter both baseline and post-PLR VTI');
+  } else {
+    warnings.push('PLR not performed or data unavailable — using secondary indices');
+  }
+
+  if(ppv!==null){
+    if(ppvValid){
+      if(ppv>=13){ if(resp!=='likely'){resp='likely';cls='green';} reasons.push(`PPV ${ppv}% ≥13% → Fluid responsiveness likely (PPV validated)`); }
+      else { reasons.push(`PPV ${ppv}% &lt;13% → Fluid responsiveness less likely by PPV`); if(resp==='uncertain'){resp='unlikely';cls='red';} }
+    } else {
+      warnings.push(`PPV ${ppv}% entered but NOT valid per S2 criteria — PPV excluded from assessment`);
+    }
+  }
+
+  if(ivcdi!==null){
+    const ivcMsg=ivcdi>=12?
+      `IVC DI ${ivcdi}% ≥12% — supports fluid responsiveness (confirmatory only, not standalone)`:
+      `IVC DI ${ivcdi}% &lt;12% — does not support fluid responsiveness`;
+    if(lastComputed.ivcCautions&&lastComputed.ivcCautions.length>0){
+      warnings.push(`IVC DI ${ivcdi}% — interpret cautiously (cautions present from S2)`);
+    } else { reasons.push(ivcMsg); }
+  }
+
+  let label=resp==='likely'?'Fluid Responsiveness — Likely':resp==='unlikely'?'Fluid Responsiveness — Unlikely':'Fluid Responsiveness — Uncertain';
+  let html=`<strong>${label}</strong><div style="font-size:12px;font-weight:700;margin-top:4px;">Assessment Basis:</div>${li(reasons)}`;
+  if(warnings.length) html+=`<div style="font-size:12px;font-weight:700;margin-top:4px;">⚠ Notes:</div>${li(warnings)}`;
+  html+=`<div style="font-size:11px;margin-top:6px;opacity:.8;">IVC DI is supportive evidence only — not to be used as standalone criterion.</div>`;
+
+  document.getElementById('s5_result').className=`result ${cls}`;
+  document.getElementById('s5_result').innerHTML=html;
+  lastComputed.s5_resp=resp; lastComputed.s5_label=label;
+  return {resp,label};
+}
+
+// ═══════════════════════════════════════════════════
+// SECTION 6 — FLUID TOLERANCE
+// ═══════════════════════════════════════════════════
+function computeS6(){
+  const bl=$s('s6_blines');
+  const intolR=[], borderR=[];
+
+  if(bl==='diffuse') intolR.push('Diffuse B-lines (≥3 zones) — pulmonary congestion');
+  else if(bl==='focal') borderR.push('Focal B-lines (&lt;3 zones) — early congestion signs');
+  if(is('s6_pulEdema')) intolR.push('Pulmonary oedema on ultrasound');
+  if(is('worsO2')) intolR.push('Worsening oxygenation trend');
+  if(is('s6_sevLV')) intolR.push('Severe LV dysfunction (EF &lt;30%)');
+  if(is('s6_rvDil')&&is('s6_septFlat')) intolR.push('RV dilation + septal flattening — RV failure risk');
+  else if(is('s6_rvDil')) borderR.push('RV dilation without septal flattening — borderline RV tolerance');
+  if(is('s6_venCong')) borderR.push('Venous congestion present');
+  if(is('s6_hepatCong')) borderR.push('Hepatic congestion present');
+  if(is('s6_risCVP')) borderR.push('Rising CVP — venous pressure increasing');
+
+  let tol='', cls='', html='';
+  if(intolR.length>=2){
+    tol='Not Fluid Tolerant'; cls='red';
+    html=`<strong>⛔ ${tol}</strong><div style="font-size:12px;font-weight:700;margin-top:4px;">Intolerance Criteria:</div>${li(intolR)}`;
+    if(borderR.length) html+=`<div style="font-size:12px;font-weight:700;margin-top:4px;">Additional Concerns:</div>${li(borderR)}`;
+  } else if(intolR.length===1||borderR.length>=2){
+    tol='Borderline Fluid Tolerance'; cls='orange';
+    html=`<strong>⚠ ${tol}</strong><div style="font-size:12px;margin-top:3px;">Proceed with extreme caution. Reassess immediately after each bolus.</div>${li([...intolR,...borderR])}`;
+  } else {
+    tol='Fluid Tolerant'; cls='green';
+    html=`<strong>✓ ${tol}</strong><div style="font-size:12px;margin-top:3px;">No significant signs of pulmonary or venous congestion at this time.</div>`;
+    if(borderR.length) html+=`<div style="font-size:12px;font-weight:700;margin-top:4px;">Monitor:</div>${li(borderR)}`;
+  }
+
+  document.getElementById('s6_result').className=`result ${cls}`;
+  document.getElementById('s6_result').innerHTML=html;
+  lastComputed.s6_tol=tol; lastComputed.s6_cls=cls;
+  return {tol,cls,intolR,borderR};
+}
+
+// ═══════════════════════════════════════════════════
+// SECTION 7 — INTERVENTIONS
+// ═══════════════════════════════════════════════════
+function computeS7(s1,s5,s6){
+  const {status:shockStatus}=s1;
+  const {resp}=s5;
+  const {tol,intolR}=s6;
+  const map=$n('s1_map');
+  const lv=$s('s3_lv');
+
+  let blocks=[];
+
+  let fluidRec='', fluidCls='';
+  if(resp==='likely'&&tol==='Fluid Tolerant'){ fluidRec='Recommend: 250 mL crystalloid bolus over 10–15 min. Mandatory reassessment after each bolus. Repeat up to 500 mL total if clinically indicated.'; fluidCls='green'; }
+  else if(resp==='likely'&&tol==='Borderline Fluid Tolerance'){ fluidRec='Recommend: Cautious 250 mL crystalloid challenge only. Reassess immediately after. Do NOT repeat without clear clinical improvement.'; fluidCls='orange'; }
+  else if(resp==='likely'&&tol==='Not Fluid Tolerant'){ fluidRec='Fluid responsive but NOT tolerant. Do NOT give further fluids. Prioritise vasopressor/inotrope support.'; fluidCls='red'; }
+  else if(resp==='unlikely'){ fluidRec='Fluid responsiveness unlikely. Further fluid boluses are unlikely to benefit and may cause harm. Stop fluids unless critical emergency.'; fluidCls='red'; }
+  else { fluidRec='Fluid responsiveness uncertain. Reassess dynamic indices. Proceed with caution — small fluid challenge (100–250 mL) with close monitoring if MAP critical.'; fluidCls='yellow'; }
+  blocks.push(`<div class="sum-block" style="border-left-color:var(--${fluidCls==='green'?'green':fluidCls==='red'?'red':fluidCls==='orange'?'orange':'yellow'})"><h4>7A — Fluid Strategy</h4><p>${fluidRec}</p></div>`);
+
+  let vpRec='';
+  if(map!==null&&map<65){ vpRec='MAP &lt;65 mmHg — Suggest norepinephrine initiation or titration to maintain MAP ≥65 mmHg.'; if(tol==='Not Fluid Tolerant') vpRec+=' Vasopressor is primary support here.'; }
+  else if(tol==='Not Fluid Tolerant'){ vpRec='Fluid intolerance present — consider early vasopressor initiation even if MAP borderline.'; }
+  else { vpRec='MAP currently ≥65 mmHg. Continue monitoring. Initiate vasopressor if MAP falls or fluid strategy inadequate.'; }
+  if(intolR.length>0) vpRec+=' Refractory vasoplegia: consider adding vasopressin if norepinephrine dose escalating.';
+  blocks.push(`<div class="sum-block"><h4>7B — Vasopressor Strategy</h4><p>${vpRec}</p></div>`);
+
+  let inoRec='';
+  if(lv==='severe'||lv==='moderate'){ inoRec='Low cardiac output / severe LV dysfunction identified. Consider inotrope support (dobutamine or milrinone). Optimise preload and afterload first.'; }
+  else if(lv==='hyperdynamic'){ inoRec='Hyperdynamic LV — inotropes NOT indicated. Focus on vasopressor and volume management.'; }
+  else { inoRec='LV function normal or mildly reduced. Inotropes not currently indicated unless reassessment changes picture.'; }
+  blocks.push(`<div class="sum-block"><h4>7C — Inotrope Strategy</h4><p>${inoRec}</p></div>`);
+
+  let etiRecs=[];
+  if(is('tamponade')) etiRecs.push('🚨 Tamponade physiology: Urgent pericardial decompression evaluation — cardiology/cardiothoracic consult immediately.');
+  if(is('dvt')&&is('rvStrain')) etiRecs.push('🚨 Massive PE pattern: Activate PE management pathway — anticoagulation, thrombolysis assessment, haemodynamic support.');
+  if(is('hemorrhage')||is('giBleed')||is('trauma')) etiRecs.push('🩸 Haemorrhagic phenotype: Blood product-based resuscitation (pRBC, FFP, platelets). Minimise crystalloid. Activate MTP if criteria met.');
+  if(is('ptx')) etiRecs.push('🚨 Tension PTX pattern: Urgent needle decompression / chest drain. Do NOT delay for imaging if clinically critical.');
+  if(is('aortaAbn')) etiRecs.push('🔴 Aortic pathology: Urgent vascular / cardiothoracic assessment. Avoid over-pressurisation. CT aorta if haemodynamically stable.');
+  if(etiRecs.length===0) etiRecs.push('No specific etiology-directed interventions flagged at this time. Continue phenotype-guided management.');
+  blocks.push(`<div class="sum-block"><h4>7D — Etiology-Specific Actions</h4><p>${etiRecs.join('<br>')}</p></div>`);
+
+  document.getElementById('s7_result').innerHTML=blocks.join('');
+  lastComputed.fluidRec=fluidRec; lastComputed.vpRec=vpRec; lastComputed.inoRec=inoRec;
+  return {fluidRec,vpRec,inoRec};
+}
+
+// ═══════════════════════════════════════════════════
+// SECTION 9 — RED FLAGS
+// ═══════════════════════════════════════════════════
+function computeFlags(){
+  const lac=$n('s1_lac');
+  const flags=[];
+  if(is('tamponade')) flags.push('🚨 Tamponade physiology — pericardial decompression may be needed urgently');
+  if(is('dvt')&&is('rvStrain')&&is('septFlat')) flags.push('🚨 Massive PE pattern — DVT + RV strain + septal flattening');
+  if(is('ptx')) flags.push('🚨 Tension pneumothorax pattern — absent lung sliding + haemodynamic compromise');
+  if(is('s6_pulEdema')&&$s('s6_blines')==='diffuse') flags.push('🚨 Severe pulmonary oedema — diffuse B-lines + pulmonary oedema on US');
+  if(lastComputed.s5_resp==='unlikely'&&lastComputed.s6_tol==='Not Fluid Tolerant') flags.push('🚨 Refractory shock pattern — not responsive AND not tolerant to fluids');
+  if(lac!==null&&lac>4) flags.push(`🚨 Severe hyperlactataemia — lactate ${lac} mmol/L (&gt;4 mmol/L)`);
+  if(is('rvStrain')&&is('s6_rvDil')&&is('s6_septFlat')) flags.push('🚨 Severe RV failure — RV strain + dilation + septal flattening');
+  if(is('aortaAbn')) flags.push('🔴 Aortic pathology suspected — urgent evaluation required');
+
+  const el=document.getElementById('s9_result');
+  if(flags.length>0){
+    el.className='result red';
+    el.innerHTML=`<strong>⚠ ${flags.length} URGENT ALERT(S) ACTIVE</strong>${li(flags)}
+    <div style="font-size:12px;margin-top:6px;font-weight:700;">Immediate clinician review required for all flagged conditions.</div>`;
+    document.getElementById('flagBanner').style.display='block';
+    document.getElementById('flagItems').innerHTML=flags.map(f=>f.replace(/🚨 |🔴 /g,'')).join(' · ');
+  } else {
+    el.className='result green';
+    el.innerHTML='<strong>✓ No Active Red Flag Alerts</strong><div style="font-size:12px;margin-top:3px;">Continue monitoring. Reassess regularly.</div>';
+    document.getElementById('flagBanner').style.display='none';
+  }
+  lastComputed.flags=flags;
+  return {flags};
+}
+
+// ═══════════════════════════════════════════════════
+// SECTION 10 — SUMMARY
+// ═══════════════════════════════════════════════════
+function computeS10(s1,s4,s5,s6,s7,flags){
+  const pt=document.getElementById('ptName')?.value||'Patient';
+  const bed=document.getElementById('ptBed')?.value||'';
+  const lac=$n('s1_lac');
+  const now=new Date().toLocaleString('en-IN',{hour12:true,dateStyle:'medium',timeStyle:'short'});
+  const blocks=[];
+
+  blocks.push(`<div class="sum-block"><h4>Patient</h4><p><b>${pt}</b> · Bed ${bed} · Generated: ${now}</p></div>`);
+  blocks.push(`<div class="sum-block"><h4>Shock Assessment</h4><p>${s1.status}</p></div>`);
+  blocks.push(`<div class="sum-block"><h4>Most Likely Shock Phenotype</h4><p>${s4.pheLabel}. ${s4.confidence}.</p></div>`);
+  blocks.push(`<div class="sum-block"><h4>Fluid Responsiveness &amp; Tolerance</h4><p>${s5.label}. Fluid tolerance: <b>${s6.tol}</b>.</p></div>`);
+  blocks.push(`<div class="sum-block"><h4>Suggested Intervention (Clinician Verification Required)</h4><p><b>Fluid:</b> ${s7.fluidRec}<br><b>Vasopressor:</b> ${s7.vpRec}<br><b>Inotrope:</b> ${s7.inoRec}</p></div>`);
+
+  const keyFindings=[];
+  if(s1.si) keyFindings.push(`Shock Index ${s1.si.toFixed(2)}`);
+  if(lac!==null) keyFindings.push(`Lactate ${lac} mmol/L`);
+  if(s1.criteria.length) keyFindings.push(`${s1.criteria.length} shock criteria met`);
+  if(flags.flags.length) keyFindings.push(`${flags.flags.length} red flag alert(s) active`);
+  blocks.push(`<div class="sum-block"><h4>Key Physiologic Findings</h4><p>${keyFindings.join(' · ')||'Refer to individual sections for detailed findings.'}</p></div>`);
+  blocks.push(`<div class="sum-block"><h4>Recommended Reassessment Plan</h4><p>Reassess after every fluid bolus, vasopressor change, or clinical deterioration. Routine reassessment every 30–60 minutes. Track MAP, HR, lactate, UO, LVOT VTI, SpO₂, and lung ultrasound findings sequentially (Section 8).</p></div>`);
+
+  if(flags.flags.length>0){
+    blocks.push(`<div class="sum-block" style="border-left-color:var(--red);background:var(--redl);">
+      <h4 style="color:var(--red);">⚠ Active Red Flag Alerts (${flags.flags.length})</h4>
+      <p style="color:#7F1D1D;">${flags.flags.join('<br>')}</p>
+    </div>`);
+  }
+
+  // ScvO2 module integration
+  if(lastComputed.sc_pattern && lastComputed.sc_pattern !== 'none'){
+    const scCls = lastComputed.sc_pattern==='low_flow'?'var(--red)':
+                  lastComputed.sc_pattern==='distributive'?'var(--orange)':
+                  lastComputed.sc_pattern==='adequate'?'var(--green)':'var(--yellow)';
+    blocks.push(`<div class="sum-block" style="border-left-color:${scCls};">
+      <h4>S11 · ScvO₂ &amp; A–V CO₂ Gap</h4>
+      <p>${lastComputed.sc_summary||'—'}<br><small>${lastComputed.sc_phenoTxt||''}</small></p>
+    </div>`);
+  }
+
+  document.getElementById('s10_result').innerHTML=blocks.join('');
+}
+
+// ═══════════════════════════════════════════════════
+// LIVE PANEL UPDATE
+// ═══════════════════════════════════════════════════
+function updatePanel(s1,s2,s4,s5,s6,s7,flags){
+  const pt=document.getElementById('ptName')?.value||'—';
+  const bed=document.getElementById('ptBed')?.value||'';
+  document.getElementById('pv_pt').textContent=`${pt} · Bed ${bed}`;
+
+  const setPv=(id,boxId,text,cls)=>{
+    document.getElementById(id).innerHTML=text;
+    const b=document.getElementById(boxId);
+    b.className='p-sec '+(cls==='red'?'p-alert':cls==='green'?'p-ok':cls==='orange'?'p-warn':'p-info');
+  };
+
+  setPv('pv_s1','pv_s1_box',s1.status,s1.cls);
+  const siTxt=s1.si?`<span style="font-family:'DM Mono',monospace;font-size:16px;">${s1.si.toFixed(2)}</span><small>${s1.si>1.5?'⚠ Severe (>1.5)':s1.si>1?'Elevated (>1)':'Within normal'}</small>`:'N/A';
+  document.getElementById('pv_si').innerHTML=siTxt;
+  const s2txt=lastComputed.ppvValid?'PPV: Valid ✓ | IVC: '+(lastComputed.ivcCautions?.length>0?'Caution ⚠':'Reliable ✓'):'PPV: Invalid — Use PLR+VTI';
+  setPv('pv_s2','pv_s2_box',s2txt,lastComputed.ppvValid?'green':'orange');
+  setPv('pv_s4','pv_s4_box',s4.pheLabel+'<small>'+s4.confidence+'</small>',s4.pheCls);
+  setPv('pv_s5','pv_s5_box',s5.label,s5.resp==='likely'?'green':s5.resp==='unlikely'?'red':'orange');
+  setPv('pv_s6','pv_s6_box',s6.tol,s6.cls);
+  const fluidSnip=(lastComputed.fluidRec||'').substring(0,70)+(lastComputed.fluidRec?.length>70?'…':'');
+  setPv('pv_s7','pv_s7_box',fluidSnip,'info');
+
+  const flagBox=document.getElementById('pv_flags_box');
+  if(flags.flags.length>0){
+    flagBox.style.display='block';
+    document.getElementById('pv_flags').innerHTML=flags.flags.map(f=>f.replace(/^🚨 |^🔴 /,'')).join('<br>');
+  } else { flagBox.style.display='none'; }
+}
+
+// ═══════════════════════════════════════════════════
+// MASTER COMPUTE
+// ═══════════════════════════════════════════════════
+function compute(){
+  const s1=computeS1();
+  const s2=computeS2();
+  const s3=computeS3();
+  const s4=computeS4();
+  const s5=computeS5(s2);
+  const s6=computeS6();
+  const s7=computeS7(s1,s5,s6);
+  const flags=computeFlags();
+  computeScvO2();  // re-run ScvO2 so phenotype context stays in sync
+  computeS10(s1,s4,s5,s6,s7,flags);
+  updatePanel(s1,s2,s4,s5,s6,s7,flags);
+}
+
+// ═══════════════════════════════════════════════════
+// REASSESSMENT LOG
+// ═══════════════════════════════════════════════════
+function addRA(){
+  const map=$n('ra_map'),hr=$n('ra_hr'),lac=$n('ra_lac');
+  const uo=$n('ra_uo'),vti=$n('ra_vti'),spo2=$n('ra_spo2'),crt=$n('ra_crt');
+  const trigger=$s('ra_trigger');
+  const now=new Date().toLocaleTimeString('en-IN',{hour12:true,hour:'2-digit',minute:'2-digit'});
+  raRows.push({time:now,map,hr,lac,uo,vti,spo2,crt,trigger});
+  renderRA();
+}
+function clearRA(){raRows=[];renderRA();}
+function renderRA(){
+  const el=document.getElementById('s8_table');
+  if(!raRows.length){el.innerHTML='<p style="font-size:12px;color:var(--muted);padding:12px 0;">No entries yet. Enter values and click + Add Entry.</p>';return;}
+  const tLabels={fluid_bolus:'Fluid Bolus',vasopressor:'Vasopressor Δ',clinical_change:'Clinical Δ',routine:'Routine'};
+  let html=`<table id="raTable"><tr>
+    <th>Time</th><th>Trigger</th><th>MAP</th><th>HR</th><th>Lactate</th><th>UO</th><th>VTI</th><th>SpO₂</th><th>CRT</th><th>Trend</th>
+  </tr>`;
+  raRows.forEach((r,i)=>{
+    const p=i>0?raRows[i-1]:null;
+    let tScore=0;
+    if(p){
+      if(r.map&&p.map) tScore+=r.map>p.map?1:-1;
+      if(r.hr&&p.hr) tScore+=r.hr<p.hr?1:-1;
+      if(r.lac&&p.lac) tScore+=r.lac<p.lac?1:-1;
+      if(r.uo&&p.uo) tScore+=r.uo>p.uo?1:-1;
+    }
+    const ovTrend=p===null?'<span class="trend-nc">Baseline</span>':
+      tScore>0?'<span class="trend-up">▲ Improving</span>':
+      tScore<0?'<span class="trend-dn">▼ Worsening</span>':'<span class="trend-nc">→ Unchanged</span>';
+    html+=`<tr>
+      <td>${r.time}</td><td>${tLabels[r.trigger]||r.trigger}</td>
+      <td>${r.map??'—'}</td><td>${r.hr??'—'}</td><td>${r.lac??'—'}</td>
+      <td>${r.uo??'—'}</td><td>${r.vti??'—'}</td><td>${r.spo2??'—'}</td>
+      <td>${r.crt??'—'}</td><td>${ovTrend}</td>
+    </tr>`;
+  });
+  html+='</table>';
+  el.innerHTML=html;
+}
+
+function printSum(){
+  // ── Collect all values ──────────────────────────────────────
+  const v = id => document.getElementById(id)?.value || '—';
+  const tg = k => T[k]==='yes' ? 'Yes' : 'No';
+  const n  = id => { const x=parseFloat(document.getElementById(id)?.value); return isNaN(x)?null:x; };
+  const lc = lastComputed;
+  const pt = v('ptName'), bed = v('ptBed'), mrn = v('ptMRN');
+  const now = new Date().toLocaleString('en-IN',{hour12:true,dateStyle:'long',timeStyle:'short'});
+  const si_num = (n('s1_hr')&&n('s1_sbp')&&n('s1_sbp')>0) ? (n('s1_hr')/n('s1_sbp')).toFixed(2) : '—';
+
+  // Reassessment table rows
+  const tLabels={fluid_bolus:'Fluid Bolus',vasopressor:'Vasopressor Δ',clinical_change:'Clinical Δ',routine:'Routine'};
+  const raHtml = raRows.length===0 ? '<p style="color:#888;font-size:12px;">No reassessment entries recorded.</p>' :
+    `<table style="width:100%;border-collapse:collapse;font-size:11px;">
+      <thead><tr style="background:#0D7377;color:#fff;">
+        <th style="padding:5px 8px;text-align:left;">Time</th>
+        <th style="padding:5px 8px;text-align:left;">Trigger</th>
+        <th style="padding:5px 8px;text-align:center;">MAP</th>
+        <th style="padding:5px 8px;text-align:center;">HR</th>
+        <th style="padding:5px 8px;text-align:center;">Lactate</th>
+        <th style="padding:5px 8px;text-align:center;">UO</th>
+        <th style="padding:5px 8px;text-align:center;">VTI</th>
+        <th style="padding:5px 8px;text-align:center;">SpO₂</th>
+        <th style="padding:5px 8px;text-align:center;">CRT</th>
+        <th style="padding:5px 8px;text-align:center;">Trend</th>
+      </tr></thead><tbody>` +
+    raRows.map((r,i)=>{
+      const p=i>0?raRows[i-1]:null;
+      let ts=0;
+      if(p){if(r.map&&p.map)ts+=r.map>p.map?1:-1;if(r.hr&&p.hr)ts+=r.hr<p.hr?1:-1;if(r.lac&&p.lac)ts+=r.lac<p.lac?1:-1;if(r.uo&&p.uo)ts+=r.uo>p.uo?1:-1;}
+      const tr=p===null?'Baseline':ts>0?'▲ Improving':ts<0?'▼ Worsening':'→ Unchanged';
+      const trCol=p===null?'#555':ts>0?'#007A60':ts<0?'#CC0000':'#555';
+      const bg=i%2===0?'#fff':'#f4fafa';
+      return `<tr style="background:${bg};">
+        <td style="padding:4px 8px;">${r.time}</td>
+        <td style="padding:4px 8px;">${tLabels[r.trigger]||r.trigger}</td>
+        <td style="padding:4px 8px;text-align:center;">${r.map??'—'}</td>
+        <td style="padding:4px 8px;text-align:center;">${r.hr??'—'}</td>
+        <td style="padding:4px 8px;text-align:center;">${r.lac??'—'}</td>
+        <td style="padding:4px 8px;text-align:center;">${r.uo??'—'}</td>
+        <td style="padding:4px 8px;text-align:center;">${r.vti??'—'}</td>
+        <td style="padding:4px 8px;text-align:center;">${r.spo2??'—'}</td>
+        <td style="padding:4px 8px;text-align:center;">${r.crt??'—'}</td>
+        <td style="padding:4px 8px;text-align:center;font-weight:700;color:${trCol};">${tr}</td>
+      </tr>`;
+    }).join('') + '</tbody></table>';
+
+  // Red flags html
+  const flags = lc.flags||[];
+  const flagsHtml = flags.length===0
+    ? `<div style="background:#E8FAF0;border-left:4px solid #00897B;border-radius:6px;padding:10px 14px;color:#004D40;font-weight:600;">✓ No active red flag alerts at time of report generation.</div>`
+    : flags.map(f=>`<div style="background:#FFF0F0;border-left:4px solid #D63031;border-radius:6px;padding:8px 14px;margin-bottom:6px;color:#7F1D1D;font-size:12px;font-weight:600;">${f.replace(/🚨 |🔴 /g,'⚠ ')}</div>`).join('');
+
+  // ScvO2 section html (only if data entered)
+  const scHtml = (lc.sc_pattern && lc.sc_pattern!=='none') ? `
+    <div class="section-card">
+      <div class="section-head" style="background:linear-gradient(135deg,#1A237E,#3949AB);">3D — ScvO₂ &amp; A–V CO₂ Gap</div>
+      <div class="section-body">
+        <div class="row2col">
+          <div class="kv"><span class="kl">ScvO₂</span><span class="kv2" style="color:${lc.sc_scvo2!==null&&lc.sc_scvo2<70?'#D63031':'#1A7A4A'}">${lc.sc_scvo2!==null?lc.sc_scvo2+'%':'Not entered'}</span></div>
+          <div class="kv"><span class="kl">A–V CO₂ Gap</span><span class="kv2" style="color:${lc.sc_avco2!==null&&lc.sc_avco2>6?'#D63031':'#1A7A4A'}">${lc.sc_avco2!==null?lc.sc_avco2+' mmHg':'Not entered'}</span></div>
+        </div>
+        <div class="result-box ${lc.sc_pattern==='low_flow'?'res-red':lc.sc_pattern==='distributive'?'res-orange':lc.sc_pattern==='adequate'?'res-green':'res-yellow'}">
+          <strong>${lc.sc_mainText||'—'}</strong>
+        </div>
+        <div class="result-box res-tl" style="margin-top:6px;">
+          <strong>Phenotype Integration:</strong> ${lc.sc_phenoTxt||'—'}
+        </div>
+      </div>
+    </div>` : '';
+
+  // ── Build HTML report ───────────────────────────────────────
+  const reportHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Hemodynamic DSS Report — ${pt}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;background:#fff;line-height:1.55;}
+  @page{size:A4;margin:14mm 14mm 16mm 14mm;}
+
+  /* HEADER */
+  .doc-header{background:linear-gradient(135deg,#064749,#0D7377);color:#fff;padding:14px 18px;border-radius:0 0 8px 8px;margin-bottom:16px;}
+  .doc-header h1{font-size:16px;font-weight:700;margin-bottom:4px;}
+  .doc-header .sub{font-size:10px;opacity:.8;}
+  .doc-header .pt-line{margin-top:10px;font-size:11px;display:flex;flex-wrap:wrap;gap:16px;}
+  .doc-header .pt-line span{opacity:.9;}
+  .doc-header .pt-line strong{opacity:1;}
+
+  /* SECTION CARDS */
+  .section-card{margin-bottom:14px;border:1px solid #C5DCDC;border-radius:8px;overflow:hidden;break-inside:avoid;}
+  .section-head{background:linear-gradient(135deg,#0D7377,#14919B);color:#fff;padding:8px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+  .section-body{padding:12px 14px;}
+
+  /* KEY-VALUE ROWS */
+  .kv{display:flex;align-items:baseline;gap:6px;padding:3px 0;border-bottom:1px solid #EEF5F5;}
+  .kv:last-child{border-bottom:none;}
+  .kl{font-size:10.5px;font-weight:600;color:#5A7A7A;min-width:160px;flex-shrink:0;}
+  .kv2{font-size:11.5px;color:#0F2328;font-weight:500;}
+  .row2col{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px;}
+
+  /* RESULT BOXES */
+  .result-box{border-radius:6px;padding:8px 12px;font-size:11.5px;border-left:4px solid transparent;margin-top:8px;}
+  .res-tl{background:#E6F4F5;border-color:#0D7377;color:#064749;}
+  .res-green{background:#E8FAF0;border-color:#00897B;color:#004D40;}
+  .res-red{background:#FFF0F0;border-color:#D63031;color:#7F1D1D;}
+  .res-orange{background:#FFF4EF;border-color:#E17055;color:#7B2D00;}
+  .res-yellow{background:#FFFDE7;border-color:#F9A825;color:#78350F;}
+  .result-box strong{display:block;font-size:12px;font-weight:700;margin-bottom:3px;}
+
+  /* PATIENT INFO GRID */
+  .pt-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 12px;margin-bottom:14px;background:#F0F8F8;border:1px solid #C5DCDC;border-radius:8px;padding:12px 14px;}
+  .pt-field label{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#5A7A7A;font-weight:700;display:block;margin-bottom:2px;}
+  .pt-field span{font-size:12px;font-weight:600;color:#0F2328;}
+
+  /* SUMMARY BOX */
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .sum-item{background:#F2FAFA;border:1px solid #C5DCDC;border-radius:6px;padding:8px 10px;}
+  .sum-item h4{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#0D7377;font-weight:700;margin-bottom:3px;}
+  .sum-item p{font-size:11.5px;color:#0F2328;line-height:1.5;}
+
+  /* FLAGS */
+  .flag-item{background:#FFF0F0;border-left:4px solid #D63031;border-radius:5px;padding:6px 10px;margin-bottom:5px;font-size:11px;font-weight:600;color:#7F1D1D;}
+
+  /* TABLE */
+  table{width:100%;border-collapse:collapse;}
+  th{background:#0D7377;color:#fff;padding:5px 7px;font-size:10px;text-align:left;}
+  td{padding:4px 7px;font-size:10.5px;border-bottom:1px solid #EEF5F5;}
+  tr:nth-child(even) td{background:#F4FAFA;}
+
+  /* DISCLAIMER */
+  .disclaimer{background:#FFFDE7;border:1px solid #F9A825;border-radius:6px;padding:8px 12px;font-size:10px;color:#78350F;margin-top:14px;}
+
+  /* FOOTER */
+  .doc-footer{text-align:center;font-size:9px;color:#888;margin-top:16px;border-top:1px solid #ddd;padding-top:8px;}
+
+  /* PRINT SPECIFIC */
+  @media print{
+    body{font-size:11px;}
+    .no-print{display:none!important;}
+    .section-card{break-inside:avoid;}
+    .doc-header{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .section-head{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  }
+</style>
+</head>
+<body>
+
+<!-- Print button (hidden on print) -->
+<div class="no-print" style="position:sticky;top:0;z-index:100;background:#fff;padding:10px 14px;border-bottom:1px solid #C5DCDC;display:flex;align-items:center;justify-content:space-between;">
+  <span style="font-size:13px;font-weight:700;color:#0D7377;">📋 Hemodynamic DSS Report — ${pt}</span>
+  <div style="display:flex;gap:8px;">
+    <button onclick="window.print()" style="background:linear-gradient(135deg,#064749,#0D7377);color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;">🖨 Save as PDF / Print</button>
+    <button onclick="window.close()" style="background:#fff;border:1px solid #C5DCDC;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;">✕ Close</button>
+  </div>
+</div>
+
+<!-- DOCUMENT HEADER -->
+<div class="doc-header">
+  <h1>🫀 Hemodynamic Decision Support System — Clinical Report</h1>
+  <div class="sub">Medicover MICU · Bedside Clinical Decision Support Tool · Generated: ${now}</div>
+  <div class="pt-line">
+    <span><strong>Patient:</strong> ${pt}</span>
+    <span><strong>MRN:</strong> ${mrn}</span>
+    <span><strong>Bed:</strong> ${bed}</span>
+    <span><strong>Age/Sex:</strong> ${v('ptAge')}</span>
+    <span><strong>Weight:</strong> ${v('ptWt')} kg</span>
+    <span><strong>Attending:</strong> ${v('ptDoc')}</span>
+    <span><strong>Diagnosis:</strong> ${v('ptDx')}</span>
+  </div>
+</div>
+
+<!-- ── S1: SHOCK SCREENING ── -->
+<div class="section-card">
+  <div class="section-head">Section 1 — Initial Shock Screening</div>
+  <div class="section-body">
+    <div class="row2col">
+      <div>
+        <div class="kv"><span class="kl">MAP</span><span class="kv2" style="color:${n('s1_map')!==null&&n('s1_map')<65?'#D63031':'inherit'}">${v('s1_map')} mmHg ${n('s1_map')!==null&&n('s1_map')<65?'⚠ BELOW 65':'✓'}</span></div>
+        <div class="kv"><span class="kl">Systolic BP</span><span class="kv2">${v('s1_sbp')} mmHg</span></div>
+        <div class="kv"><span class="kl">Heart Rate</span><span class="kv2">${v('s1_hr')} bpm</span></div>
+        <div class="kv"><span class="kl">Shock Index (HR÷SBP)</span><span class="kv2" style="color:${parseFloat(si_num)>1.5?'#D63031':parseFloat(si_num)>1?'#E17055':'inherit'}">${si_num} ${parseFloat(si_num)>1.5?'⚠ SEVERE':parseFloat(si_num)>1?'↑ Elevated':''}</span></div>
+        <div class="kv"><span class="kl">Lactate</span><span class="kv2" style="color:${n('s1_lac')!==null&&n('s1_lac')>2?'#D63031':'inherit'}">${v('s1_lac')} mmol/L ${n('s1_lac')!==null&&n('s1_lac')>4?'⚠ CRITICAL':n('s1_lac')>2?'↑ Elevated':''}</span></div>
+      </div>
+      <div>
+        <div class="kv"><span class="kl">Urine Output</span><span class="kv2">${v('s1_uo')} mL/hr</span></div>
+        <div class="kv"><span class="kl">CRT</span><span class="kv2" style="color:${n('s1_crt')!==null&&n('s1_crt')>2?'#E17055':'inherit'}">${v('s1_crt')} sec ${n('s1_crt')!==null&&n('s1_crt')>2?'↑ Prolonged':''}</span></div>
+        <div class="kv"><span class="kl">Mental Status</span><span class="kv2">${v('s1_ms')}</span></div>
+        <div class="kv"><span class="kl">Mottling</span><span class="kv2">${tg('mottling')}</span></div>
+        <div class="kv"><span class="kl">Respiratory Distress</span><span class="kv2">${tg('respDist')}</span></div>
+      </div>
+    </div>
+    <div class="result-box ${lc.s1_cls==='red'?'res-red':lc.s1_cls==='orange'?'res-orange':'res-green'}">
+      <strong>${lc.s1_status||'—'}</strong>
+      ${lc.criteria&&lc.criteria.length?'<div style="font-size:10.5px;margin-top:4px;"><b>Criteria met:</b> '+lc.criteria.length+' — '+lc.criteria.map(c=>c.replace(/<[^>]+>/g,'')).join(' | ')+'</div>':''}
+    </div>
+  </div>
+</div>
+
+<!-- ── S2: DATA VALIDATION ── -->
+<div class="section-card">
+  <div class="section-head">Section 2 — Data Validation / Index Reliability</div>
+  <div class="section-body">
+    <div class="row2col">
+      <div>
+        <div class="kv"><span class="kl">Ventilation Mode</span><span class="kv2">${v('s2_vent')}</span></div>
+        <div class="kv"><span class="kl">Tidal Volume</span><span class="kv2">${v('s2_vt')} mL/kg IBW</span></div>
+        <div class="kv"><span class="kl">PEEP</span><span class="kv2">${v('s2_peep')} cmH₂O</span></div>
+        <div class="kv"><span class="kl">Cardiac Rhythm</span><span class="kv2">${v('s2_rhythm')}</span></div>
+      </div>
+      <div>
+        <div class="kv"><span class="kl">Spontaneous Breathing</span><span class="kv2">${tg('spontBreath')}</span></div>
+        <div class="kv"><span class="kl">Intra-abd. Hypertension</span><span class="kv2">${tg('iah')}</span></div>
+        <div class="kv"><span class="kl">Severe Pulm. HTN</span><span class="kv2">${tg('sevPH')}</span></div>
+        <div class="kv"><span class="kl">RV Dysfunction</span><span class="kv2">${tg('rvDys')}</span></div>
+      </div>
+    </div>
+    <div class="result-box ${lc.ppvValid?'res-green':'res-orange'}">
+      <strong>PPV/SVV: ${lc.ppvValid?'Valid — Dynamic indices reliable':'Not Valid — Prefer PLR + LVOT VTI'}</strong>
+      ${lc.ivcCautions&&lc.ivcCautions.length?'<div style="font-size:10.5px;margin-top:3px;"><b>IVC Cautions:</b> '+lc.ivcCautions.map(c=>c.replace(/<[^>]+>/g,'')).join(' | ')+'</div>':'<div style="font-size:10.5px;margin-top:3px;">IVC: Reliable ✓</div>'}
+    </div>
+  </div>
+</div>
+
+<!-- ── S3: RUSH PROTOCOL ── -->
+<div class="section-card">
+  <div class="section-head">Section 3 — RUSH Protocol Integration (3A Pump · 3B Tank · 3C Pipes)</div>
+  <div class="section-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#0D7377;text-transform:uppercase;margin-bottom:4px;letter-spacing:.4px;">3A — Pump</div>
+        <div class="kv"><span class="kl">LV Function</span><span class="kv2">${v('s3_lv')}</span></div>
+        <div class="kv"><span class="kl">RV Size</span><span class="kv2">${v('s3_rv')}</span></div>
+        <div class="kv"><span class="kl">RV Strain</span><span class="kv2">${tg('rvStrain')}</span></div>
+        <div class="kv"><span class="kl">Septal Flattening</span><span class="kv2">${tg('septFlat')}</span></div>
+        <div class="kv"><span class="kl">Tamponade</span><span class="kv2" style="color:${T.tamponade==='yes'?'#D63031':'inherit'}">${tg('tamponade')}</span></div>
+        <div class="kv"><span class="kl">LVOT VTI Baseline</span><span class="kv2">${v('s3_vti_base')} cm</span></div>
+        <div class="kv"><span class="kl">RWMA</span><span class="kv2">${tg('rwma')}</span></div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#0D7377;text-transform:uppercase;margin-bottom:4px;letter-spacing:.4px;">3B — Tank</div>
+        <div class="kv"><span class="kl">IVC Status</span><span class="kv2">${v('s3_ivc')}</span></div>
+        <div class="kv"><span class="kl">IVC DI</span><span class="kv2">${v('s3_ivcdi')}%</span></div>
+        <div class="kv"><span class="kl">Lung B-lines</span><span class="kv2">${v('s3_blines')}</span></div>
+        <div class="kv"><span class="kl">Pulmonary Edema</span><span class="kv2">${tg('pulEdema')}</span></div>
+        <div class="kv"><span class="kl">Pleural Effusion</span><span class="kv2">${tg('pleuralEff')}</span></div>
+        <div class="kv"><span class="kl">Ascites</span><span class="kv2">${tg('ascites')}</span></div>
+        <div class="kv"><span class="kl">Venous Congestion</span><span class="kv2">${tg('venCong')}</span></div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#0D7377;text-transform:uppercase;margin-bottom:4px;letter-spacing:.4px;">3C — Pipes</div>
+        <div class="kv"><span class="kl">DVT</span><span class="kv2">${tg('dvt')}</span></div>
+        <div class="kv"><span class="kl">Pneumothorax</span><span class="kv2" style="color:${T.ptx==='yes'?'#D63031':'inherit'}">${tg('ptx')}</span></div>
+        <div class="kv"><span class="kl">Haemorrhage</span><span class="kv2">${tg('hemorrhage')}</span></div>
+        <div class="kv"><span class="kl">Vasodilatory</span><span class="kv2">${tg('vasodil')}</span></div>
+        <div class="kv"><span class="kl">Pulse Pressure</span><span class="kv2">${v('s3_pp')}</span></div>
+        <div class="kv"><span class="kl">Extremities</span><span class="kv2">${v('s3_ext')}</span></div>
+      </div>
+    </div>
+    ${lc.pumpFindings&&lc.pumpFindings.length?`<div class="result-box ${lc.pumpFindings.length>2?'res-red':'res-orange'}"><strong>3A Pump Findings:</strong> ${lc.pumpFindings.map(f=>f.replace(/<[^>]+>/g,'')).join(' · ')}</div>`:''}
+    ${lc.tankFindings&&lc.tankFindings.length?`<div class="result-box ${lc.tankFindings.length>2?'res-red':'res-orange'}" style="margin-top:6px;"><strong>3B Tank Findings:</strong> ${lc.tankFindings.map(f=>f.replace(/<[^>]+>/g,'')).join(' · ')}</div>`:''}
+    ${lc.pipeFindings&&lc.pipeFindings.length?`<div class="result-box ${lc.pipeFindings.length>1?'res-red':'res-orange'}" style="margin-top:6px;"><strong>3C Pipe Findings:</strong> ${lc.pipeFindings.map(f=>f.replace(/<[^>]+>/g,'')).join(' · ')}</div>`:''}
+    ${lc.sc_pattern&&lc.sc_pattern!=='none'?`
+    <div style="margin-top:10px;padding-top:8px;border-top:1px dashed #C5DCDC;">
+      <div style="font-size:10px;font-weight:700;color:#1A237E;text-transform:uppercase;margin-bottom:6px;letter-spacing:.4px;">3D — ScvO₂ &amp; A–V CO₂ Gap</div>
+      <div class="row2col">
+        <div class="kv"><span class="kl">ScvO₂</span><span class="kv2" style="color:${lc.sc_scvo2!==null&&lc.sc_scvo2<70?'#D63031':'#00897B'}">${lc.sc_scvo2!==null?lc.sc_scvo2+'%':'Not entered'}</span></div>
+        <div class="kv"><span class="kl">A–V CO₂ Gap</span><span class="kv2" style="color:${lc.sc_avco2!==null&&lc.sc_avco2>6?'#D63031':'#00897B'}">${lc.sc_avco2!==null?lc.sc_avco2+' mmHg':'Not entered'}</span></div>
+      </div>
+      <div class="result-box ${lc.sc_pattern==='low_flow'?'res-red':lc.sc_pattern==='distributive'?'res-orange':lc.sc_pattern==='adequate'?'res-green':'res-yellow'}" style="margin-top:6px;">
+        <strong>${lc.sc_mainText||'—'}</strong>
+        <div style="font-size:10.5px;margin-top:3px;">${lc.sc_phenoTxt||''}</div>
+      </div>
+    </div>`:''}
+  </div>
+</div>
+
+<!-- ── S4: PHENOTYPE ── -->
+<div class="section-card">
+  <div class="section-head">Section 4 — Shock Phenotype Generation</div>
+  <div class="section-body">
+    <div class="result-box ${lc.pheCls==='red'?'res-red':lc.pheCls==='orange'?'res-orange':lc.pheCls==='yellow'?'res-yellow':'res-tl'}">
+      <strong>${lc.pheLabel||'—'}</strong>
+      <div style="font-size:11px;margin-top:3px;">${lc.confidence||'—'}</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── S5: FLUID RESPONSIVENESS ── -->
+<div class="section-card">
+  <div class="section-head">Section 5 — Fluid Responsiveness Assessment</div>
+  <div class="section-body">
+    <div class="row2col">
+      <div>
+        <div class="kv"><span class="kl">PLR Performed</span><span class="kv2">${tg('plrDone')}</span></div>
+        <div class="kv"><span class="kl">LVOT VTI Baseline</span><span class="kv2">${v('s5_vti_base2')} cm</span></div>
+        <div class="kv"><span class="kl">LVOT VTI Post-PLR</span><span class="kv2">${v('s5_plr_vti2')} cm</span></div>
+        ${(n('s5_vti_base2')&&n('s5_plr_vti2')&&n('s5_vti_base2')>0)?`<div class="kv"><span class="kl">ΔVTI (PLR response)</span><span class="kv2" style="font-weight:700;color:${((n('s5_plr_vti2')-n('s5_vti_base2'))/n('s5_vti_base2')*100)>=10?'#00897B':'#D63031'}">${((n('s5_plr_vti2')-n('s5_vti_base2'))/n('s5_vti_base2')*100).toFixed(1)}%</span></div>`:''}
+      </div>
+      <div>
+        <div class="kv"><span class="kl">PPV</span><span class="kv2">${v('s5_ppv')}% ${lc.ppvValid?'(valid)':'(not valid — excluded)'}</span></div>
+        <div class="kv"><span class="kl">IVC DI</span><span class="kv2">${v('s5_ivcdi')}% (supportive only)</span></div>
+      </div>
+    </div>
+    <div class="result-box ${lc.s5_resp==='likely'?'res-green':lc.s5_resp==='unlikely'?'res-red':'res-yellow'}">
+      <strong>${lc.s5_label||'—'}</strong>
+    </div>
+  </div>
+</div>
+
+<!-- ── S6: FLUID TOLERANCE ── -->
+<div class="section-card">
+  <div class="section-head">Section 6 — Fluid Tolerance Assessment</div>
+  <div class="section-body">
+    <div class="row2col">
+      <div>
+        <div class="kv"><span class="kl">Lung B-lines</span><span class="kv2">${v('s6_blines')}</span></div>
+        <div class="kv"><span class="kl">Pulmonary Edema</span><span class="kv2">${tg('s6_pulEdema')}</span></div>
+        <div class="kv"><span class="kl">Worsening Oxygenation</span><span class="kv2">${tg('worsO2')}</span></div>
+        <div class="kv"><span class="kl">Severe LV Dysfunction</span><span class="kv2">${tg('s6_sevLV')}</span></div>
+      </div>
+      <div>
+        <div class="kv"><span class="kl">RV Dilation</span><span class="kv2">${tg('s6_rvDil')}</span></div>
+        <div class="kv"><span class="kl">Septal Flattening</span><span class="kv2">${tg('s6_septFlat')}</span></div>
+        <div class="kv"><span class="kl">Venous Congestion</span><span class="kv2">${tg('s6_venCong')}</span></div>
+        <div class="kv"><span class="kl">Rising CVP</span><span class="kv2">${tg('s6_risCVP')}</span></div>
+      </div>
+    </div>
+    <div class="result-box ${lc.s6_cls==='red'?'res-red':lc.s6_cls==='orange'?'res-orange':'res-green'}">
+      <strong>Fluid Tolerance: ${lc.s6_tol||'—'}</strong>
+    </div>
+  </div>
+</div>
+
+<!-- ── S7: INTERVENTIONS ── -->
+<div class="section-card">
+  <div class="section-head">Section 7 — Hemodynamic Intervention Recommendations</div>
+  <div class="section-body">
+    <div style="margin-bottom:8px;padding:8px 10px;background:#F2FAFA;border-radius:6px;border-left:3px solid #0D7377;">
+      <div style="font-size:10px;font-weight:700;color:#0D7377;text-transform:uppercase;margin-bottom:3px;">7A — Fluid Strategy</div>
+      <div style="font-size:11.5px;">${lc.fluidRec||'—'}</div>
+    </div>
+    <div style="margin-bottom:8px;padding:8px 10px;background:#FFF4EF;border-radius:6px;border-left:3px solid #E17055;">
+      <div style="font-size:10px;font-weight:700;color:#E17055;text-transform:uppercase;margin-bottom:3px;">7B — Vasopressor Strategy</div>
+      <div style="font-size:11.5px;">${lc.vpRec||'—'}</div>
+    </div>
+    <div style="padding:8px 10px;background:#F5EEF8;border-radius:6px;border-left:3px solid #7B1FA2;">
+      <div style="font-size:10px;font-weight:700;color:#7B1FA2;text-transform:uppercase;margin-bottom:3px;">7C — Inotrope Strategy</div>
+      <div style="font-size:11.5px;">${lc.inoRec||'—'}</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── S8: REASSESSMENT ── -->
+<div class="section-card">
+  <div class="section-head">Section 8 — Serial Reassessment Log (${raRows.length} entries)</div>
+  <div class="section-body">${raHtml}</div>
+</div>
+
+<!-- ── S9: RED FLAGS ── -->
+<div class="section-card">
+  <div class="section-head" style="background:linear-gradient(135deg,#7F1D1D,#D63031);">Section 9 — Red Flag Alerts (${flags.length} active)</div>
+  <div class="section-body">${flagsHtml}</div>
+</div>
+
+<!-- ── S10: FINAL SUMMARY ── -->
+<div class="section-card">
+  <div class="section-head">Section 10 — Final Clinical Summary</div>
+  <div class="section-body">
+    <div class="summary-grid">
+      <div class="sum-item"><h4>Shock Status</h4><p>${lc.s1_status||'—'}</p></div>
+      <div class="sum-item"><h4>Shock Phenotype</h4><p>${lc.pheLabel||'—'}<br><small style="color:#5A7A7A;">${lc.confidence||''}</small></p></div>
+      <div class="sum-item"><h4>Fluid Responsiveness</h4><p>${lc.s5_label||'—'}</p></div>
+      <div class="sum-item"><h4>Fluid Tolerance</h4><p>${lc.s6_tol||'—'}</p></div>
+      ${lc.sc_pattern&&lc.sc_pattern!=='none'?`<div class="sum-item"><h4>ScvO₂ / A–V CO₂ Gap</h4><p>${lc.sc_mainText||'—'}</p></div>`:''}
+      <div class="sum-item"><h4>Active Red Flags</h4><p style="color:${flags.length>0?'#D63031':'#00897B'};font-weight:600;">${flags.length>0?flags.length+' alert(s) — see Section 9':'None'}</p></div>
+    </div>
+    <div style="margin-top:10px;padding:10px 12px;background:#F0F8F8;border-radius:6px;border:1px solid #C5DCDC;font-size:11.5px;line-height:1.6;">
+      <strong style="display:block;color:#0D7377;margin-bottom:4px;font-size:10px;text-transform:uppercase;letter-spacing:.4px;">Recommended Reassessment Plan</strong>
+      Reassess after every fluid bolus, vasopressor change, or clinical deterioration. Routine reassessment every 30–60 minutes. Track MAP, HR, lactate, UO, LVOT VTI, SpO₂, and lung ultrasound findings sequentially using Section 8.
+    </div>
+  </div>
+</div>
+
+<!-- DISCLAIMER -->
+<div class="disclaimer">
+  ⚕ <strong>CLINICAL DISCLAIMER:</strong> This report was generated by a decision-support tool only. It does not constitute autonomous medical advice, diagnosis, or treatment. All clinical decisions must be reviewed and verified by a qualified physician before implementation. Values may be affected by clinical context, sampling error, and patient-specific factors not captured here.
+</div>
+
+<div class="doc-footer">
+  Hemodynamic DSS — Medicover MICU &nbsp;|&nbsp; Generated: ${now} &nbsp;|&nbsp; Patient: ${pt} &nbsp;|&nbsp; MRN: ${mrn}
+</div>
+
+<script>
+  // Auto-trigger print dialog after rendering
+  window.addEventListener('load', function(){
+    setTimeout(function(){ window.print(); }, 600);
+  });
+<\/script>
+
+
+<!-- ═══ SERVICE WORKER + INSTALL PROMPT ══════════════════════════════════════
+     Registers the service worker for offline caching.
+     Shows a subtle "Install App" banner when the browser fires beforeinstallprompt.
+════════════════════════════════════════════════════════════════════════════ -->
+<script>
+// ── Service Worker Registration ──────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', { scope: './' })
+      .then(reg => {
+        console.log('[App] Service worker registered. Scope:', reg.scope);
+
+        // Check for updates every time app is opened
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // New version available — show subtle update notice
+              showUpdateBanner();
+            }
+          });
+        });
+      })
+      .catch(err => console.warn('[App] Service worker registration failed:', err));
+  });
+}
+
+// ── Install prompt (Android Chrome "Add to Home Screen" banner) ─────────────
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();           // Stop the browser's automatic mini-infobar
+  deferredPrompt = e;           // Save it for later
+  showInstallBanner();          // Show our own styled banner
+});
+
+function showInstallBanner() {
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.style.display = 'flex';
+}
+
+function hideInstallBanner() {
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.style.display = 'none';
+}
+
+function installApp() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(result => {
+    console.log('[App] Install prompt result:', result.outcome);
+    deferredPrompt = null;
+    hideInstallBanner();
+  });
+}
+
+// ── Update available banner ──────────────────────────────────────────────────
+function showUpdateBanner() {
+  const banner = document.getElementById('pwa-update-banner');
+  if (banner) banner.style.display = 'flex';
+}
+
+function applyUpdate() {
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+    window.location.reload();
+  }
+}
+
+// ── Hide iOS install banner after user taps dismiss ──────────────────────────
+function dismissIOSBanner() {
+  const banner = document.getElementById('pwa-ios-banner');
+  if (banner) banner.style.display = 'none';
+  localStorage.setItem('ios-banner-dismissed', '1');
+}
+
+// ── On load: show iOS install hint if on iOS and not already installed ───────
+window.addEventListener('DOMContentLoaded', () => {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches
+                             || navigator.standalone;
+  const dismissed = localStorage.getItem('ios-banner-dismissed');
+
+  if (isIOS && !isInStandaloneMode && !dismissed) {
+    const banner = document.getElementById('pwa-ios-banner');
+    if (banner) banner.style.display = 'flex';
+  }
+});
+</script>
+</body>
+</html>`;
+
+  // Open in new tab and write the report
+  const win = window.open('', '_blank');
+  if(!win){
+    alert('Pop-up blocked. Please allow pop-ups for this page, then click Download PDF Report again.');
+    return;
+  }
+  win.document.open();
+  win.document.write(reportHtml);
+  win.document.close();
+}
+
+// ═══════════════════════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════════════════════
+function updateClock(){
+  const now=new Date();
+  document.getElementById('clock').innerHTML=
+    now.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'})+
+    '<br>'+now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+  const dtEl=document.getElementById('ptDT');
+  if(dtEl&&!dtEl.value) dtEl.value=now.toLocaleString('en-IN',{hour12:true,dateStyle:'short',timeStyle:'short'});
+}
+setInterval(updateClock,1000); updateClock();
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  // ── iOS CRITICAL FIX ──────────────────────────────────────────────
+  // Safari treats <button> without type attribute as type="submit".
+  // This causes clicks to be swallowed or page to reload on iOS.
+  // Explicitly set type="button" on every button in the document.
+  document.querySelectorAll('button').forEach(btn => {
+    if(!btn.getAttribute('type')) btn.setAttribute('type','button');
+  });
+  // ─────────────────────────────────────────────────────────────────
+
+  document.getElementById('s3_vti_base').addEventListener('input',()=>{
+    document.getElementById('s5_vti_base2').value=document.getElementById('s3_vti_base').value;
+    compute();
+  });
+  document.getElementById('s5_plr_vti').addEventListener('input',()=>{
+    document.getElementById('s5_plr_vti2').value=document.getElementById('s5_plr_vti').value;
+    compute();
+  });
+  document.getElementById('s3_ivcdi').addEventListener('input',()=>{
+    document.getElementById('s5_ivcdi').value=document.getElementById('s3_ivcdi').value;
+    compute();
+  });
+  renderRA();
+  compute();
+});
+</script>
+
+
+<!-- ═══ SERVICE WORKER + INSTALL PROMPT ══════════════════════════════════════
+     Registers the service worker for offline caching.
+     Shows a subtle "Install App" banner when the browser fires beforeinstallprompt.
+════════════════════════════════════════════════════════════════════════════ -->
+<script>
+// ── Service Worker Registration ──────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', { scope: './' })
+      .then(reg => {
+        console.log('[App] Service worker registered. Scope:', reg.scope);
+
+        // Check for updates every time app is opened
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // New version available — show subtle update notice
+              showUpdateBanner();
+            }
+          });
+        });
+      })
+      .catch(err => console.warn('[App] Service worker registration failed:', err));
+  });
+}
+
+// ── Install prompt (Android Chrome "Add to Home Screen" banner) ─────────────
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();           // Stop the browser's automatic mini-infobar
+  deferredPrompt = e;           // Save it for later
+  showInstallBanner();          // Show our own styled banner
+});
+
+function showInstallBanner() {
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.style.display = 'flex';
+}
+
+function hideInstallBanner() {
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.style.display = 'none';
+}
+
+function installApp() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(result => {
+    console.log('[App] Install prompt result:', result.outcome);
+    deferredPrompt = null;
+    hideInstallBanner();
+  });
+}
+
+// ── Update available banner ──────────────────────────────────────────────────
+function showUpdateBanner() {
+  const banner = document.getElementById('pwa-update-banner');
+  if (banner) banner.style.display = 'flex';
+}
+
+function applyUpdate() {
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+    window.location.reload();
+  }
+}
+
+// ── Hide iOS install banner after user taps dismiss ──────────────────────────
+function dismissIOSBanner() {
+  const banner = document.getElementById('pwa-ios-banner');
+  if (banner) banner.style.display = 'none';
+  localStorage.setItem('ios-banner-dismissed', '1');
+}
+
+// ── On load: show iOS install hint if on iOS and not already installed ───────
+window.addEventListener('DOMContentLoaded', () => {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches
+                             || navigator.standalone;
+  const dismissed = localStorage.getItem('ios-banner-dismissed');
+
+  if (isIOS && !isInStandaloneMode && !dismissed) {
+    const banner = document.getElementById('pwa-ios-banner');
+    if (banner) banner.style.display = 'flex';
+  }
+});
+</script>
+</body>
+</html>
